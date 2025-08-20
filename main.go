@@ -1,0 +1,206 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"math"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
+
+var ctx = context.Background()
+
+type Task struct {
+	ID              string `json:"id"`
+	Attempt         int    `json:"attempt"`
+	Source          string `json:"source"`
+	Destination     string `json:"destination"`
+	DeadDestination string `json:"dead_destination"`
+	MaxRetries      int    `json:"max_retries"`
+	BaseDelay       int    `json:"base_delay"`
+	ClientId        string `json:"client_id"`
+	IsPriority      bool   `json:"is_priority"`
+	MessageData     string `json:"message_data"`
+	DestinationType string `json:"destination_type"`
+}
+
+const (
+	retryKey = "retry:schedule:"
+	// baseDelay    = 2 * time.Second
+	// maxRetries   = 1
+	pollInterval = 1 * time.Second
+)
+
+func main() {
+	redisClient := NewRedisClient()
+	if err := PingRedis(redisClient); err != nil {
+		fmt.Println("Failed to connect to Redis:", err)
+		return
+	}
+	fmt.Println("Connected to Redis successfully!")
+	// keys, err := GetAllKeys(redisClient, "*")
+	// if err != nil {
+	// 	fmt.Println("Failed to get keys from Redis:", err)
+	// 	return
+	// }
+	// fmt.Println("Keys in Redis:")
+	// for _, key := range keys {
+	// 	fmt.Println("-", key)
+	// }
+
+	// Optional: seed initial tasks
+	seedTasks(redisClient)
+
+	// Start the worker loop
+	worker(redisClient)
+}
+
+func scheduleTask(rdb *redis.Client, task Task, delay time.Duration) error {
+	data, err := json.Marshal(task)
+	if err != nil {
+		return err
+	}
+
+	score := float64(time.Now().Add(delay).Unix())
+	return rdb.ZAdd(ctx, retryKey, redis.Z{
+		Score:  score,
+		Member: data,
+	}).Err()
+}
+
+func worker(rdb *redis.Client) {
+	for {
+		now := float64(time.Now().Unix())
+		// Fetch up to N tasks whose time has come
+		tasks, err := rdb.ZRangeByScoreWithScores(ctx, retryKey, &redis.ZRangeBy{
+			Min:    "0",
+			Max:    fmt.Sprintf("%f", now),
+			Offset: 0,
+			Count:  10,
+		}).Result()
+		if err != nil {
+			log.Printf("Error fetching tasks: %v\n", err)
+			time.Sleep(pollInterval)
+			continue
+		}
+
+		if len(tasks) == 0 {
+			time.Sleep(pollInterval)
+			continue
+		}
+
+		for _, z := range tasks {
+			var task Task
+			err := json.Unmarshal([]byte(z.Member.(string)), &task)
+			if err != nil {
+				log.Printf("Error unmarshaling task: %v\n", err)
+				continue
+			}
+			fmt.Printf("Processing task %s (attempt %d)\n", task.ID, task.Attempt)
+			// Remove task from queue
+			rdb.ZRem(ctx, retryKey, z.Member)
+
+			fmt.Printf("Processing task %s (attempt %d)\n", task.ID, task.Attempt)
+
+			// Simulate task failure
+			success := false // for demo
+
+			if !success {
+				task.Attempt++
+				fmt.Println("Attempt: ", task.Attempt)
+				fmt.Println("Max Retries: ", task.MaxRetries)
+				if task.Attempt > task.MaxRetries {
+					log.Printf("Task %s failed after %d attempts. Giving up.\n", task.ID, task.Attempt)
+					continue
+				}
+
+				// Schedule retry with exponential backoff
+				delay := time.Duration(float64(task.BaseDelay*int(time.Second)) * math.Pow(2, float64(task.Attempt-1)))
+				fmt.Println("Scheduling retry for task:", task.ID, "with delay:", delay)
+				err := scheduleTask(rdb, task, delay)
+				if err != nil {
+					log.Printf("Failed to reschedule task %s: %v\n", task.ID, err)
+				} else {
+					log.Printf("Rescheduled task %s with delay %v\n", task.ID, delay)
+				}
+			} else {
+				log.Printf("Task %s completed successfully\n", task.ID)
+			}
+		}
+	}
+}
+
+func seedTasks(rdb *redis.Client) {
+	tasks := []Task{
+		{ID: "task-1", Attempt: 0, Source: "test-app", Destination: "kafka-topic", DeadDestination: "dead-kafka-topic", MaxRetries: 3, BaseDelay: 1, ClientId: "123", IsPriority: true, MessageData: "Email body structure", DestinationType: "kafka"},
+		{ID: "task-2", Attempt: 1, Source: "test-app2", Destination: "kafka-topic", DeadDestination: "dead-kafka-topic", MaxRetries: 2, BaseDelay: 2, ClientId: "234", IsPriority: false, MessageData: "Email body structure2", DestinationType: "kafka"},
+		{ID: "task-3", Attempt: 2, Source: "test-app3", Destination: "kafka-topic", DeadDestination: "dead-kafka-topic", MaxRetries: 1, BaseDelay: 3, ClientId: "345", IsPriority: true, MessageData: "Email body structure3", DestinationType: "kafka"},
+	}
+
+	for _, task := range tasks {
+		_ = scheduleTask(rdb, task, 0)
+	}
+}
+
+/*
+Processing task task-1 (attempt 0)
+2025/08/19 23:17:13 Rescheduled task task-1 with delay 1s
+Processing task task-2 (attempt 1)
+2025/08/19 23:17:13 Rescheduled task task-2 with delay 4s
+Processing task task-3 (attempt 2)
+2025/08/19 23:17:13 Task task-3 failed after 3 attempts. Giving up.
+Processing task task-1 (attempt 1)
+2025/08/19 23:17:14 Rescheduled task task-1 with delay 2s
+Processing task task-1 (attempt 2)
+2025/08/19 23:17:16 Rescheduled task task-1 with delay 4s
+Processing task task-2 (attempt 2)
+2025/08/19 23:17:17 Rescheduled task task-2 with delay 8s
+Processing task task-1 (attempt 3)
+2025/08/19 23:17:20 Task task-1 failed after 4 attempts. Giving up.
+Processing task task-2 (attempt 3)
+2025/08/19 23:17:25 Rescheduled task task-2 with delay 16s
+Processing task task-2 (attempt 4)
+2025/08/19 23:17:41 Rescheduled task task-2 with delay 32s
+Processing task task-2 (attempt 5)
+2025/08/19 23:18:13 Task task-2 failed after 6 attempts. Giving up.
+*/
+
+/*
+localhost:6379> zrange retry:schedule 0 -1 withscores
+1) "{\"id\":\"task-1\",\"attempt\":1,\"source\":\"test-app\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":3,\"base_delay\":1,\"client_id\":\"123\",\"is_priority\":true,\"message_data\":\"Email body structure\"}"
+2) "1755625907"
+3) "{\"id\":\"task-2\",\"attempt\":2,\"source\":\"test-app2\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":5,\"base_delay\":2,\"client_id\":\"234\",\"is_priority\":false,\"message_data\":\"Email body structure2\"}"
+4) "1755625910"
+
+
+
+localhost:6379> zrange retry:schedule 0 -1 withscores
+1) "{\"id\":\"task-1\",\"attempt\":2,\"source\":\"test-app\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":3,\"base_delay\":1,\"client_id\":\"123\",\"is_priority\":true,\"message_data\":\"Email body structure\"}"
+2) "1755625909"
+3) "{\"id\":\"task-2\",\"attempt\":2,\"source\":\"test-app2\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":5,\"base_delay\":2,\"client_id\":\"234\",\"is_priority\":false,\"message_data\":\"Email body structure2\"}"
+4) "1755625910"
+
+
+
+localhost:6379> zrange retry:schedule 0 -1 withscores
+1) "{\"id\":\"task-2\",\"attempt\":2,\"source\":\"test-app2\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":5,\"base_delay\":2,\"client_id\":\"234\",\"is_priority\":false,\"message_data\":\"Email body structure2\"}"
+2) "1755625910"
+3) "{\"id\":\"task-1\",\"attempt\":3,\"source\":\"test-app\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":3,\"base_delay\":1,\"client_id\":\"123\",\"is_priority\":true,\"message_data\":\"Email body structure\"}"
+4) "1755625913"
+
+
+
+localhost:6379> zrange retry:schedule 0 -1 withscores
+1) "{\"id\":\"task-2\",\"attempt\":3,\"source\":\"test-app2\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":5,\"base_delay\":2,\"client_id\":\"234\",\"is_priority\":false,\"message_data\":\"Email body structure2\"}"
+2) "1755625918"
+
+
+localhost:6379> zrange retry:schedule 0 -1 withscores
+1) "{\"id\":\"task-2\",\"attempt\":3,\"source\":\"test-app2\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":5,\"base_delay\":2,\"client_id\":\"234\",\"is_priority\":false,\"message_data\":\"Email body structure2\"}"
+2) "1755625918"
+
+*/
+// zadd retry:schedule 1755623982 "{\"ID\":\"task-7\",\"attempt\":1,\"source\":\"test-app7\",\"destination\":\"kafka-topic\",\"dead_destination\":\"dead-kafka-topic\",\"max_retries\":5,\"base_delay\":2,\"client_id\":\"234\",\"is_priority\":false,\"message_data\":\"Email body structure5\"}"

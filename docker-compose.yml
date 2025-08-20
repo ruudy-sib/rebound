@@ -1,0 +1,30 @@
+#version: '3.8'
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    environment:
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+      - REDIS_HOST=redis
+    volumes:
+      - redis_data:/data
+  kafka-retry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kafka-retry
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+    command: ["./kafka-retry"]
+
+volumes:
+  redis_data:
+    driver: local
