@@ -11,6 +11,8 @@ services:
       - REDIS_HOST=redis
     volumes:
       - redis_data:/data
+    networks:
+      - kafka-net
   kafka-retry:
     build:
       context: .
@@ -23,8 +25,16 @@ services:
     restart: unless-stopped
     environment:
       - REDIS_HOST=redis
+    networks:
+      - kafka-net
     command: ["./kafka-retry"]
 
 volumes:
   redis_data:
     driver: local
+
+
+networks:
+  kafka-net:
+    name: kafka-net
+    external: true

@@ -38,6 +38,26 @@ paths:
 
 components:
   schemas:
+    Destination:
+      type: object
+      required:
+        - host
+        - port
+        - topic
+      properties:
+        host:
+          type: string
+          description: Hostname or IP address
+          example: "localhost"
+        port:
+          type: string
+          description: Port number
+          example: "9092"
+        topic:
+          type: string
+          description: Topic name
+          example: "my-topic"
+
     Task:
       type: object
       required:
@@ -63,13 +83,9 @@ components:
           description: Source system or application
           example: "test-app"
         destination:
-          type: string
-          description: Target destination for the task
-          example: "kafka-topic"
+          $ref: '#/components/schemas/Destination'
         dead_destination:
-          type: string
-          description: Destination for failed tasks after max retries
-          example: "dead-kafka-topic"
+          $ref: '#/components/schemas/Destination'
         max_retries:
           type: integer
           description: Maximum number of retry attempts

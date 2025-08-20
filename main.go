@@ -14,18 +14,24 @@ import (
 
 var ctx = context.Background()
 
+type Destination struct {
+	Host  string `json:"host"`
+	Port  string `json:"port"`
+	Topic string `json:"topic"`
+}
+
 type Task struct {
-	ID              string `json:"id"`
-	Attempt         int    `json:"attempt"`
-	Source          string `json:"source"`
-	Destination     string `json:"destination"`
-	DeadDestination string `json:"dead_destination"`
-	MaxRetries      int    `json:"max_retries"`
-	BaseDelay       int    `json:"base_delay"`
-	ClientId        string `json:"client_id"`
-	IsPriority      bool   `json:"is_priority"`
-	MessageData     string `json:"message_data"`
-	DestinationType string `json:"destination_type"`
+	ID              string      `json:"id"`
+	Attempt         int         `json:"attempt"`
+	Source          string      `json:"source"`
+	Destination     Destination `json:"destination"`
+	DeadDestination Destination `json:"dead_destination"`
+	MaxRetries      int         `json:"max_retries"`
+	BaseDelay       int         `json:"base_delay"`
+	ClientId        string      `json:"client_id"`
+	IsPriority      bool        `json:"is_priority"`
+	MessageData     string      `json:"message_data"`
+	DestinationType string      `json:"destination_type"`
 }
 
 const (
@@ -43,7 +49,7 @@ func handleAddTask(w http.ResponseWriter, r *http.Request) {
 
 	var task Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -73,7 +79,7 @@ func main() {
 	fmt.Println("Connected to Redis successfully!")
 
 	// Optional: seed initial tasks
-	seedTasks(redisClient)
+	// seedTasks(redisClient)
 
 	// Start the worker in a goroutine
 	go worker(redisClient)
@@ -124,6 +130,7 @@ func worker(rdb *redis.Client) {
 
 		for _, z := range tasks {
 			var task Task
+			success := true
 			err := json.Unmarshal([]byte(z.Member.(string)), &task)
 			if err != nil {
 				log.Printf("Error unmarshaling task: %v\n", err)
@@ -134,10 +141,27 @@ func worker(rdb *redis.Client) {
 			rdb.ZRem(ctx, retryKey, z.Member)
 
 			fmt.Printf("Processing task %s (attempt %d)\n", task.ID, task.Attempt)
+			//========================
+			// Here you would process the task, e.g., send a message to Kafka
+			if task.DestinationType == "kafka" {
+				// Send message to Kafka
+				kafkaClient, err := NewKafkaClient(task.Destination.Host + ":" + task.Destination.Port)
+				if err != nil {
+					log.Printf("Error creating Kafka client: %v\n", err)
+					continue
+				}
+				defer kafkaClient.Close()
 
+				// Produce message
+				time.Sleep(5000 * time.Millisecond)
+				if err := kafkaClient.PushMessage(ctx, task.Destination.Topic, []byte(task.ID), []byte(task.MessageData)); err != nil {
+					log.Printf("Error producing message to Kafka: %v\n", err)
+					success = false
+				}
+			}
+			//========================
 			// Simulate task failure
-			success := false // for demo
-
+			// success := false // for demo
 			if !success {
 				task.Attempt++
 				fmt.Println("Attempt: ", task.Attempt)
@@ -164,10 +188,12 @@ func worker(rdb *redis.Client) {
 }
 
 func seedTasks(rdb *redis.Client) {
+	dest := Destination{Host: "localhost", Port: "9092", Topic: "kafka-topic"}
+	destDead := Destination{Host: "localhost", Port: "9092", Topic: "dead-kafka-topic"}
 	tasks := []Task{
-		{ID: "task-1", Attempt: 0, Source: "test-app", Destination: "kafka-topic", DeadDestination: "dead-kafka-topic", MaxRetries: 3, BaseDelay: 1, ClientId: "123", IsPriority: true, MessageData: "Email body structure", DestinationType: "kafka"},
-		{ID: "task-2", Attempt: 1, Source: "test-app2", Destination: "kafka-topic", DeadDestination: "dead-kafka-topic", MaxRetries: 2, BaseDelay: 2, ClientId: "234", IsPriority: false, MessageData: "Email body structure2", DestinationType: "kafka"},
-		{ID: "task-3", Attempt: 2, Source: "test-app3", Destination: "kafka-topic", DeadDestination: "dead-kafka-topic", MaxRetries: 1, BaseDelay: 3, ClientId: "345", IsPriority: true, MessageData: "Email body structure3", DestinationType: "kafka"},
+		{ID: "task-1", Attempt: 0, Source: "test-app", Destination: dest, DeadDestination: destDead, MaxRetries: 3, BaseDelay: 1, ClientId: "123", IsPriority: true, MessageData: "Email body structure", DestinationType: "kafka"},
+		{ID: "task-2", Attempt: 1, Source: "test-app2", Destination: dest, DeadDestination: destDead, MaxRetries: 2, BaseDelay: 2, ClientId: "234", IsPriority: false, MessageData: "Email body structure2", DestinationType: "kafka"},
+		{ID: "task-3", Attempt: 2, Source: "test-app3", Destination: dest, DeadDestination: destDead, MaxRetries: 1, BaseDelay: 3, ClientId: "345", IsPriority: true, MessageData: "Email body structure3", DestinationType: "kafka"},
 	}
 
 	for _, task := range tasks {

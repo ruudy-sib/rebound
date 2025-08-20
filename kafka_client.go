@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
 	"strings"
 	"time"
 
@@ -13,8 +12,8 @@ type KafkaClient struct {
 	writer *kafka.Writer
 }
 
-func NewKafkaClient() (*KafkaClient, error) {
-	brokers := os.Getenv("KAFKA_BROKERS")
+func NewKafkaClient(brokers string) (*KafkaClient, error) {
+	// brokers := os.Getenv("KAFKA_BROKERS")
 	if brokers == "" {
 		brokers = "localhost:9092"
 	}
