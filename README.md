@@ -1,2 +1,0 @@
-# kafkaretry-poc
-Generic retrier
