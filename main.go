@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"net/http"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -34,28 +35,57 @@ const (
 	pollInterval = 1 * time.Second
 )
 
+func handleAddTask(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var task Task
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Initialize attempt count if not set
+	task.Attempt = 0
+
+	// Schedule the task immediately
+	if err := scheduleTask(redisClient, task, 0); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to schedule task: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": fmt.Sprintf("Task %s scheduled successfully", task.ID),
+	})
+}
+
+var redisClient *redis.Client
+
 func main() {
-	redisClient := NewRedisClient()
+	redisClient = NewRedisClient()
 	if err := PingRedis(redisClient); err != nil {
 		fmt.Println("Failed to connect to Redis:", err)
 		return
 	}
 	fmt.Println("Connected to Redis successfully!")
-	// keys, err := GetAllKeys(redisClient, "*")
-	// if err != nil {
-	// 	fmt.Println("Failed to get keys from Redis:", err)
-	// 	return
-	// }
-	// fmt.Println("Keys in Redis:")
-	// for _, key := range keys {
-	// 	fmt.Println("-", key)
-	// }
 
 	// Optional: seed initial tasks
 	seedTasks(redisClient)
 
-	// Start the worker loop
-	worker(redisClient)
+	// Start the worker in a goroutine
+	go worker(redisClient)
+
+	// Setup HTTP server
+	http.HandleFunc("/tasks", handleAddTask)
+
+	// Start HTTP server
+	fmt.Println("Starting HTTP server on :8080...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
 
 func scheduleTask(rdb *redis.Client, task Task, delay time.Duration) error {

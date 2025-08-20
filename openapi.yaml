@@ -1,0 +1,98 @@
+openapi: 3.0.0
+info:
+  title: Task Retry Management API
+  description: API for managing retryable tasks with exponential backoff
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /tasks:
+    post:
+      summary: Create a new task
+      description: Creates a new task and schedules it for processing with retry capability
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Task'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Task task-1 scheduled successfully"
+        '400':
+          description: Invalid request body
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    Task:
+      type: object
+      required:
+        - id
+        - source
+        - destination
+        - dead_destination
+        - max_retries
+        - base_delay
+        - client_id
+        - destination_type
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the task
+          example: "task-1"
+        attempt:
+          type: integer
+          description: Current attempt number (initialized to 0)
+          example: 0
+        source:
+          type: string
+          description: Source system or application
+          example: "test-app"
+        destination:
+          type: string
+          description: Target destination for the task
+          example: "kafka-topic"
+        dead_destination:
+          type: string
+          description: Destination for failed tasks after max retries
+          example: "dead-kafka-topic"
+        max_retries:
+          type: integer
+          description: Maximum number of retry attempts
+          minimum: 0
+          example: 3
+        base_delay:
+          type: integer
+          description: Base delay in seconds for exponential backoff
+          minimum: 1
+          example: 1
+        client_id:
+          type: string
+          description: Client identifier
+          example: "123"
+        is_priority:
+          type: boolean
+          description: Whether this is a priority task
+          example: true
+        message_data:
+          type: string
+          description: The actual message/payload for the task
+          example: "Email body structure"
+        destination_type:
+          type: string
+          description: Type of the destination (e.g., kafka, sqs)
+          example: "kafka"
