@@ -154,7 +154,7 @@ func worker(rdb *redis.Client) {
 
 				// Produce message
 				time.Sleep(5000 * time.Millisecond)
-				if err := kafkaClient.PushMessage(ctx, task.Destination.Topic, []byte(task.ID), []byte(task.MessageData)); err != nil {
+				if err := kafkaClient.PushMessage(ctx, task.Destination.Topic, []byte(fmt.Sprintf("%s|%d", task.ID, task.Attempt)), []byte(task.MessageData)); err != nil {
 					log.Printf("Error producing message to Kafka: %v\n", err)
 					success = false
 				}
@@ -167,7 +167,7 @@ func worker(rdb *redis.Client) {
 				fmt.Println("Attempt: ", task.Attempt)
 				fmt.Println("Max Retries: ", task.MaxRetries)
 				if task.Attempt > task.MaxRetries {
-					log.Printf("Task %s failed after %d attempts. Giving up.\n", task.ID, task.Attempt)
+					log.Printf("Task %s failed on %dth attempts. Giving up.\n", task.ID, task.Attempt)
 					continue
 				}
 

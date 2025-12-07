@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -14,10 +15,10 @@ type KafkaClient struct {
 
 func NewKafkaClient(brokers string) (*KafkaClient, error) {
 	// brokers := os.Getenv("KAFKA_BROKERS")
-	if brokers == "" {
-		brokers = "localhost:9092"
-	}
-
+	// if brokers == "" {
+	brokers = "kafka:9092"
+	// }
+	fmt.Println("Connecting to Kafka brokers at:", brokers)
 	writer := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:      strings.Split(brokers, ","),
 		BatchTimeout: time.Millisecond * 100,
