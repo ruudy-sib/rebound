@@ -283,19 +283,24 @@ Submit a task to be retried with exponential backoff.
 **Request Body:**
 ```json
 {
-  "payload": "{\"user_id\": 123, \"action\": \"send_email\"}",
+  "id": "task-12345",
+  "source": "order-service",
   "destination": {
-    "topic": "user-events",
-    "partition": 0,
-    "kafka_conn_string": "localhost:9092"
+    "host": "localhost",
+    "port": "9092",
+    "topic": "user-events"
   },
   "dead_destination": {
-    "topic": "user-events-dlq",
-    "partition": 0,
-    "kafka_conn_string": "localhost:9092"
+    "host": "localhost",
+    "port": "9092",
+    "topic": "user-events-dlq"
   },
   "max_retries": 5,
-  "retry_delay_seconds": 10
+  "base_delay": 10,
+  "client_id": "client-001",
+  "is_priority": false,
+  "message_data": "{\"user_id\": 123, \"action\": \"send_email\"}",
+  "destination_type": "kafka"
 }
 ```
 
@@ -303,15 +308,20 @@ Submit a task to be retried with exponential backoff.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `payload` | string | Yes | JSON string of the message to retry |
+| `id` | string | Yes | Unique identifier for the task |
+| `source` | string | Yes | Source system or application name |
+| `destination.host` | string | Yes | Kafka broker hostname or IP |
+| `destination.port` | string | Yes | Kafka broker port |
 | `destination.topic` | string | Yes | Kafka topic for retries |
-| `destination.partition` | int | Yes | Kafka partition (typically 0) |
-| `destination.kafka_conn_string` | string | Yes | Kafka broker address |
-| `dead_destination.topic` | string | No | Dead letter queue topic |
-| `dead_destination.partition` | int | No | Dead letter queue partition |
-| `dead_destination.kafka_conn_string` | string | No | Dead letter queue broker |
-| `max_retries` | int | Yes | Maximum retry attempts |
-| `retry_delay_seconds` | int | Yes | Base delay between retries |
+| `dead_destination.host` | string | Yes | Dead letter queue broker host |
+| `dead_destination.port` | string | Yes | Dead letter queue broker port |
+| `dead_destination.topic` | string | Yes | Dead letter queue topic |
+| `max_retries` | int | Yes | Maximum retry attempts (0 or higher) |
+| `base_delay` | int | Yes | Base delay in seconds for exponential backoff |
+| `client_id` | string | Yes | Client identifier for tracking |
+| `is_priority` | boolean | No | Whether this is a priority task (default: false) |
+| `message_data` | string | Yes | The actual message/payload to be retried |
+| `destination_type` | string | Yes | Destination type (e.g., "kafka") |
 
 **Example with cURL:**
 
@@ -319,27 +329,31 @@ Submit a task to be retried with exponential backoff.
 curl -X POST http://localhost:8080/tasks \
   -H "Content-Type: application/json" \
   -d '{
-    "payload": "{\"user_id\": 123, \"order_id\": 456}",
+    "id": "order-task-456",
+    "source": "order-service",
     "destination": {
-      "topic": "orders",
-      "partition": 0,
-      "kafka_conn_string": "localhost:9092"
+      "host": "localhost",
+      "port": "9092",
+      "topic": "orders"
     },
     "dead_destination": {
-      "topic": "orders-dlq",
-      "partition": 0,
-      "kafka_conn_string": "localhost:9092"
+      "host": "localhost",
+      "port": "9092",
+      "topic": "orders-dlq"
     },
     "max_retries": 3,
-    "retry_delay_seconds": 5
+    "base_delay": 5,
+    "client_id": "web-client-123",
+    "is_priority": true,
+    "message_data": "{\"user_id\": 123, \"order_id\": 456, \"action\": \"process_payment\"}",
+    "destination_type": "kafka"
   }'
 ```
 
 **Success Response (201 Created):**
 ```json
 {
-  "task_id": "01JQXYZ123ABC456DEF789GH",
-  "message": "Task scheduled successfully"
+  "message": "Task order-task-456 scheduled successfully"
 }
 ```
 
@@ -401,15 +415,23 @@ Worker                  Redis                   Domain Service           Kafka
 
 **Exponential Backoff Formula:**
 ```
-nextDelay = baseDelay * (2 ^ attemptNumber)
+nextDelay = base_delay * (2 ^ (attempt - 1))
 ```
 
-**Example with baseDelay=10s:**
-- Attempt 1: 10s delay
-- Attempt 2: 20s delay
-- Attempt 3: 40s delay
-- Attempt 4: 80s delay
-- Attempt 5: 160s delay
+**Example with base_delay=10s:**
+- Attempt 1: 10s delay (10 × 2^0 = 10)
+- Attempt 2: 20s delay (10 × 2^1 = 20)
+- Attempt 3: 40s delay (10 × 2^2 = 40)
+- Attempt 4: 80s delay (10 × 2^3 = 80)
+- Attempt 5: 160s delay (10 × 2^4 = 160)
+
+**Priority Tasks:**
+- Tasks with `is_priority: true` are currently treated the same as regular tasks
+- Future enhancement: Priority queue implementation for faster processing
+
+**Destination Types:**
+- Currently supported: `"kafka"`
+- Future support planned: `"sqs"`, `"pubsub"`, `"rabbitmq"`
 
 **After Max Retries Exceeded:**
 - Task is sent to `dead_destination` topic
