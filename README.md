@@ -101,6 +101,71 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed comparison.
 
 ---
 
+## When to Use Rebound
+
+### ✅ Use Rebound For
+
+**Asynchronous, durable retries** (out-of-process, persistent over minutes/hours/days):
+
+| Use Case | Example | Why Rebound? |
+|----------|---------|--------------|
+| **Failed HTTP webhooks** | Customer webhook delivery fails | Retry over hours with backoff |
+| **Kafka message failures** | Message processing throws error | Durable retry without blocking consumer |
+| **Rate-limited API calls** | Third-party API returns 429 | Wait minutes/hours before retry |
+| **Email delivery failures** | SMTP server temporarily down | Retry over days until delivered |
+| **Payment processing** | Payment gateway timeout | Intelligent retry with backoff |
+| **Background jobs** | Image processing fails | Defer retry, don't block workers |
+
+### ❌ Don't Use Rebound For
+
+**In-app synchronous retries** (immediate, in-memory, milliseconds):
+
+| Use Case | What to Use Instead |
+|----------|---------------------|
+| **Middleware failures** (retry in <1s) | `avast/retry-go` with circuit breaker |
+| **Database connection pool exhausted** | Connection pool retry logic |
+| **Validation errors** | Don't retry - return error to client |
+| **Auth middleware failures** | Immediate retry or fail fast |
+| **Request timeout in handler** | `retry.Do()` with 3 attempts, 100ms delay |
+
+### 🔀 Hybrid Approach
+
+Combine both for best results:
+
+```go
+// 1. Fast synchronous retries (milliseconds)
+err := retry.Do(
+    func() error { return callExternalAPI() },
+    retry.Attempts(3),
+    retry.Delay(100 * time.Millisecond),
+)
+
+if err == nil {
+    return // Success!
+}
+
+// 2. Still failing? Move to async retry (Rebound)
+if isRetryable(err) {
+    rebound.CreateTask(ctx, &rebound.Task{
+        Payload:    request,
+        MaxRetries: 10,  // Retry over hours
+    })
+    return http.StatusAccepted  // Tell client we'll retry async
+}
+```
+
+### Summary Table
+
+| Retry Type | Time Scale | Persistence | Tool |
+|------------|------------|-------------|------|
+| **In-app sync** | Milliseconds to seconds | In-memory | `avast/retry-go`, circuit breaker |
+| **Background async** | Minutes to days | Redis-backed | **Rebound** ✅ |
+| **Hybrid** | Try fast, then defer | Mixed | Both |
+
+**Key Insight:** Rebound is for **durable, asynchronous retries** over long time windows, not for immediate in-request retries.
+
+---
+
 ## Architecture
 
 ### Hexagonal Architecture (Ports & Adapters)
