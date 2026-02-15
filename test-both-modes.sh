@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # Test 1: Build standalone service
 echo "Test 1: Building standalone HTTP service..."
-if go build -o /tmp/rebound-standalone ./cmd/kafka-retry; then
+if go build -o /tmp/rebound-standalone ./cmd/rebound; then
     echo -e "${GREEN}✓${NC} Standalone service builds successfully"
 else
     echo -e "${RED}✗${NC} Standalone service build failed"
@@ -78,7 +78,7 @@ REQUIRED_DIRS=(
     "internal/adapter/secondary/httpproducer"
     "internal/adapter/secondary/producerfactory"
     "internal/adapter/secondary/redisstore"
-    "cmd/kafka-retry"
+    "cmd/rebound"
 )
 
 for dir in "${REQUIRED_DIRS[@]}"; do
@@ -139,11 +139,11 @@ echo -e "${GREEN}All Tests Passed!${NC}"
 echo "======================================"
 echo
 echo "Both deployment modes are working:"
-echo "  ✓ Standalone HTTP Service (cmd/kafka-retry)"
+echo "  ✓ Standalone HTTP Service (cmd/rebound)"
 echo "  ✓ Embedded Go Package (pkg/rebound)"
 echo
 echo "Next steps:"
-echo "  • Run standalone: go run cmd/kafka-retry/main.go"
+echo "  • Run standalone: go run cmd/rebound/main.go"
 echo "  • Try examples: go run examples/01-basic-usage/main.go"
 echo "  • Read docs: QUICKSTART.md, DEPLOYMENT.md"
 echo

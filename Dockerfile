@@ -7,11 +7,11 @@ RUN go mod download
 
 # Copy source code and build
 COPY . .
-RUN go build -o kafka-retry ./cmd/kafka-retry/...
+RUN go build -o rebound ./cmd/rebound/...
 
 # Runtime image
 FROM alpine:latest
 WORKDIR /app
-COPY --from=builder /app/kafka-retry ./
+COPY --from=builder /app/rebound ./
 EXPOSE 8080
-CMD ["./kafka-retry"]
+CMD ["./rebound"]

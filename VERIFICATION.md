@@ -13,7 +13,7 @@ Rebound has been successfully configured to work as **both** a standalone HTTP s
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Standalone Service (`cmd/kafka-retry`) | ✅ Builds | No errors |
+| Standalone Service (`cmd/rebound`) | ✅ Builds | No errors |
 | Embedded Package (`pkg/rebound`) | ✅ Builds | No errors |
 | All Internal Packages | ✅ Builds | No errors |
 | Example Programs (6x) | ⚠️ Linting | Minor fmt.Println warnings only |
@@ -50,7 +50,7 @@ rebound/
 │   ├── example_test.go      ✅ Usage examples
 │   └── README.md            ✅ Package documentation
 │
-├── cmd/kafka-retry/          ✅ Standalone HTTP service
+├── cmd/rebound/          ✅ Standalone HTTP service
 │   ├── main.go              ✅ Entry point
 │   ├── container.go         ✅ DI container setup
 │   └── logger.go            ✅ Logger configuration
@@ -126,7 +126,7 @@ rb.CreateTask(ctx, task)
 **Status:** ✅ Fully functional
 
 ```bash
-go run cmd/kafka-retry/main.go
+go run cmd/rebound/main.go
 curl -X POST http://localhost:8080/tasks -d '{...}'
 ```
 
@@ -206,7 +206,7 @@ None! The project was renamed from "kafkaretry" to "rebound" but:
 ./test-both-modes.sh
 
 # Build standalone
-go build ./cmd/kafka-retry
+go build ./cmd/rebound
 
 # Build package
 go build ./pkg/rebound
@@ -230,7 +230,7 @@ go run examples/01-basic-usage/main.go
 docker-compose up -d
 
 # Terminal 2: Start service
-go run cmd/kafka-retry/main.go
+go run cmd/rebound/main.go
 
 # Terminal 3: Test
 curl http://localhost:8080/health
@@ -268,7 +268,7 @@ go run examples/01-basic-usage/main.go
 - See: `INTEGRATION.md`
 
 ### For Non-Go Services
-✅ **Use standalone HTTP service** (`cmd/kafka-retry`)
+✅ **Use standalone HTTP service** (`cmd/rebound`)
 - Language agnostic
 - Simple HTTP API
 - See: `README.md`

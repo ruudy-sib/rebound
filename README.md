@@ -22,7 +22,7 @@ rb.CreateTask(ctx, &rebound.Task{...})
 
 ```bash
 # Start service
-go run cmd/kafka-retry/main.go
+go run cmd/rebound/main.go
 
 # Create task via HTTP
 curl -X POST http://localhost:8080/tasks -d '{...}'
@@ -235,7 +235,7 @@ rebound/
 │   ├── example_test.go       # Usage examples
 │   └── README.md             # Package documentation
 │
-├── cmd/kafka-retry/          # 🚀 Standalone HTTP service
+├── cmd/rebound/          # 🚀 Standalone HTTP service
 │   ├── main.go               # Entry point with graceful shutdown
 │   ├── container.go          # DI container setup
 │   └── logger.go             # Logger configuration
@@ -313,7 +313,7 @@ cd rebound
 docker-compose up -d
 
 # Run service
-go run cmd/kafka-retry/main.go
+go run cmd/rebound/main.go
 ```
 
 ---
@@ -731,7 +731,7 @@ docker-compose restart redis
 **Solution:**
 ```bash
 # Check worker is running
-docker-compose logs kafka-retry | grep "Worker started"
+docker-compose logs rebound | grep "Worker started"
 
 # Check Redis for pending tasks
 docker exec redis redis-cli ZRANGE retry:schedule: 0 -1

@@ -268,7 +268,7 @@ func (s *Service) GetPolicy(tenant *Tenant) RetryPolicy {
 docker exec redis redis-cli ZCARD retry:schedule:
 
 # Watch processing
-docker-compose logs -f kafka-retry | grep "task"
+docker-compose logs -f rebound | grep "task"
 
 # View task details
 docker exec redis redis-cli ZRANGE retry:schedule: 0 -1 WITHSCORES
@@ -285,7 +285,7 @@ docker-compose restart redis
 
 **Tasks not processing:**
 ```bash
-docker-compose logs kafka-retry | grep "Worker started"
+docker-compose logs rebound | grep "Worker started"
 ```
 
 **Webhook receiver down:**

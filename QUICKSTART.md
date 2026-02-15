@@ -79,7 +79,7 @@ Best for: **Node.js, Python, Ruby, or legacy services**
 docker-compose up -d
 
 # Or run directly
-go run cmd/kafka-retry/main.go
+go run cmd/rebound/main.go
 ```
 
 **Step 2:** Create tasks via HTTP
@@ -282,7 +282,7 @@ docker exec kafkaretry-redis-1 redis-cli ZRANGE kafkaretry:tasks 0 -1
 ### View Logs
 ```bash
 # Standalone service
-docker-compose logs -f kafka-retry
+docker-compose logs -f rebound
 
 # Embedded (your app logs)
 # Rebound uses your logger, so check your app logs
@@ -324,7 +324,7 @@ docker-compose up -d redis
 # Look for "rebound worker started" in your app logs
 
 # Check worker started (standalone)
-docker-compose logs kafka-retry | grep "Worker started"
+docker-compose logs rebound | grep "Worker started"
 ```
 
 ### High memory usage

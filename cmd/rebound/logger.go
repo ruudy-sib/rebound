@@ -28,5 +28,5 @@ func newLogger(cfg *config.Config) (*zap.Logger, error) {
 		return nil, err
 	}
 
-	return logger.Named("kafka-retry"), nil
+	return logger.Named("rebound"), nil
 }

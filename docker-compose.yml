@@ -13,11 +13,11 @@ services:
       - redis_data:/data
     networks:
       - kafka-net
-  kafka-retry:
+  rebound:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: kafka-retry
+    container_name: rebound
     depends_on:
       - redis
     ports:
@@ -27,7 +27,7 @@ services:
       - REDIS_HOST=redis
     networks:
       - kafka-net
-    command: ["./kafka-retry"]
+    command: ["./rebound"]
 
 volumes:
   redis_data:

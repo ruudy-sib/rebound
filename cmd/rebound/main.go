@@ -17,7 +17,7 @@ import (
 	"rebound/internal/port/secondary"
 )
 
-const appName = "kafka-retry"
+const appName = "rebound"
 
 var version = "dev"
 
