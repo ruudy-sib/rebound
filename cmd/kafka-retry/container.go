@@ -10,7 +10,9 @@ import (
 
 	httphandler "kafkaretry/internal/adapter/primary/http"
 	"kafkaretry/internal/adapter/primary/worker"
+	"kafkaretry/internal/adapter/secondary/httpproducer"
 	"kafkaretry/internal/adapter/secondary/kafkaproducer"
+	"kafkaretry/internal/adapter/secondary/producerfactory"
 	"kafkaretry/internal/adapter/secondary/redisstore"
 	"kafkaretry/internal/config"
 	"kafkaretry/internal/domain/service"
@@ -61,9 +63,28 @@ func buildContainer(ctx context.Context) (*dig.Container, error) {
 		return nil, err
 	}
 
-	// Kafka producer (implements secondary.MessageProducer)
-	if err := c.Provide(func(cfg *config.Config, logger *zap.Logger) secondary.MessageProducer {
-		return kafkaproducer.NewProducer(cfg, logger)
+	// Kafka producer
+	if err := c.Provide(func(cfg *config.Config, logger *zap.Logger) *kafkaproducer.Producer {
+		return kafkaproducer.NewProducer(cfg, logger).(*kafkaproducer.Producer)
+	}); err != nil {
+		return nil, err
+	}
+
+	// HTTP producer
+	if err := c.Provide(func(cfg *config.Config, logger *zap.Logger) *httpproducer.Producer {
+		return httpproducer.NewProducer(cfg, logger).(*httpproducer.Producer)
+	}); err != nil {
+		return nil, err
+	}
+
+	// Producer factory (implements secondary.MessageProducer)
+	// Routes messages to the appropriate producer based on destination type
+	if err := c.Provide(func(
+		kafkaProd *kafkaproducer.Producer,
+		httpProd *httpproducer.Producer,
+		logger *zap.Logger,
+	) secondary.MessageProducer {
+		return producerfactory.NewFactory(kafkaProd, httpProd, logger)
 	}); err != nil {
 		return nil, err
 	}

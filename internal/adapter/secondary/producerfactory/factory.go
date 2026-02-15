@@ -1,0 +1,67 @@
+package producerfactory
+
+import (
+	"context"
+	"fmt"
+
+	"go.uber.org/zap"
+
+	"kafkaretry/internal/domain/entity"
+	"kafkaretry/internal/port/secondary"
+)
+
+// Factory routes message production to the appropriate producer based on destination type.
+type Factory struct {
+	kafkaProducer secondary.MessageProducer
+	httpProducer  secondary.MessageProducer
+	logger        *zap.Logger
+}
+
+// NewFactory creates a producer factory with both Kafka and HTTP producers.
+func NewFactory(
+	kafkaProducer secondary.MessageProducer,
+	httpProducer secondary.MessageProducer,
+	logger *zap.Logger,
+) secondary.MessageProducer {
+	return &Factory{
+		kafkaProducer: kafkaProducer,
+		httpProducer:  httpProducer,
+		logger:        logger.Named("producer-factory"),
+	}
+}
+
+// Produce routes the message to the appropriate producer based on destination type.
+func (f *Factory) Produce(ctx context.Context, destination entity.Destination, key, value []byte) error {
+	// Note: We need to pass the destination type separately or derive it from the destination
+	// For now, we'll check if URL is present (HTTP) or Topic is present (Kafka)
+	if destination.URL != "" {
+		f.logger.Debug("routing to http producer", zap.String("url", destination.URL))
+		return f.httpProducer.Produce(ctx, destination, key, value)
+	}
+
+	if destination.Topic != "" {
+		f.logger.Debug("routing to kafka producer", zap.String("topic", destination.Topic))
+		return f.kafkaProducer.Produce(ctx, destination, key, value)
+	}
+
+	return fmt.Errorf("unable to determine destination type: neither URL nor Topic is set")
+}
+
+// Close closes all underlying producers.
+func (f *Factory) Close() error {
+	var errs []error
+
+	if err := f.kafkaProducer.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing kafka producer: %w", err))
+	}
+
+	if err := f.httpProducer.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("closing http producer: %w", err))
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("closing producers: %v", errs)
+	}
+
+	return nil
+}

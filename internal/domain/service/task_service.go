@@ -86,10 +86,11 @@ func (s *TaskService) processTask(ctx context.Context, task *entity.Task) {
 }
 
 func (s *TaskService) deliver(ctx context.Context, task *entity.Task) error {
+	key := []byte(fmt.Sprintf("%s|%d", task.ID, task.Attempt))
+	value := []byte(task.MessageData)
+
 	switch task.DestinationType {
-	case entity.DestinationTypeKafka:
-		key := []byte(fmt.Sprintf("%s|%d", task.ID, task.Attempt))
-		value := []byte(task.MessageData)
+	case entity.DestinationTypeKafka, entity.DestinationTypeHTTP:
 		return s.producer.Produce(ctx, task.Destination, key, value)
 	default:
 		return fmt.Errorf("%w: unsupported destination type %q", domain.ErrDeliveryFailed, task.DestinationType)
@@ -140,12 +141,30 @@ func (s *TaskService) validateTask(task *entity.Task) error {
 	if task.Source == "" {
 		return fmt.Errorf("source is required")
 	}
-	if task.Destination.Topic == "" {
-		return fmt.Errorf("destination topic is required")
-	}
 	if task.DestinationType == "" {
 		return fmt.Errorf("destination type is required")
 	}
+
+	// Validate destination based on type
+	switch task.DestinationType {
+	case entity.DestinationTypeKafka:
+		if task.Destination.Topic == "" {
+			return fmt.Errorf("destination topic is required for kafka destination")
+		}
+		if task.Destination.Host == "" {
+			return fmt.Errorf("destination host is required for kafka destination")
+		}
+		if task.Destination.Port == "" {
+			return fmt.Errorf("destination port is required for kafka destination")
+		}
+	case entity.DestinationTypeHTTP:
+		if task.Destination.URL == "" {
+			return fmt.Errorf("destination URL is required for http destination")
+		}
+	default:
+		return fmt.Errorf("unsupported destination type: %s", task.DestinationType)
+	}
+
 	if task.MaxRetries < 0 || task.MaxRetries > domain.MaxRetryLimit {
 		return fmt.Errorf("max_retries must be between 0 and %d", domain.MaxRetryLimit)
 	}
