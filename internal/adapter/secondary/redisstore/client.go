@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/config"
+	"rebound/internal/config"
 )
 
 // NewClient creates a Redis client from the application configuration

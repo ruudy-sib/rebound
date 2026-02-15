@@ -9,9 +9,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/domain"
-	"kafkaretry/internal/domain/entity"
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/domain"
+	"rebound/internal/domain/entity"
+	"rebound/internal/port/secondary"
 )
 
 // taskDTO is the Redis-specific representation of a task.
@@ -34,6 +34,7 @@ type destDTO struct {
 	Host  string `json:"host"`
 	Port  string `json:"port"`
 	Topic string `json:"topic"`
+	URL   string `json:"url"`
 }
 
 func toDTO(task *entity.Task) taskDTO {
@@ -45,11 +46,13 @@ func toDTO(task *entity.Task) taskDTO {
 			Host:  task.Destination.Host,
 			Port:  task.Destination.Port,
 			Topic: task.Destination.Topic,
+			URL:   task.Destination.URL,
 		},
 		DeadDestination: destDTO{
 			Host:  task.DeadDestination.Host,
 			Port:  task.DeadDestination.Port,
 			Topic: task.DeadDestination.Topic,
+			URL:   task.DeadDestination.URL,
 		},
 		MaxRetries:      task.MaxRetries,
 		BaseDelay:       task.BaseDelay,
@@ -69,11 +72,13 @@ func toEntity(dto taskDTO) *entity.Task {
 			Host:  dto.Destination.Host,
 			Port:  dto.Destination.Port,
 			Topic: dto.Destination.Topic,
+			URL:   dto.Destination.URL,
 		},
 		DeadDestination: entity.Destination{
 			Host:  dto.DeadDestination.Host,
 			Port:  dto.DeadDestination.Port,
 			Topic: dto.DeadDestination.Topic,
+			URL:   dto.DeadDestination.URL,
 		},
 		MaxRetries:      dto.MaxRetries,
 		BaseDelay:       dto.BaseDelay,

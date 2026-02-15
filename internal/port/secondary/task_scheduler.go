@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"kafkaretry/internal/domain/entity"
+	"rebound/internal/domain/entity"
 )
 
 // TaskScheduler defines the secondary port for scheduling and retrieving

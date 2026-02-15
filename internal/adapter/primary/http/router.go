@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/port/primary"
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/port/primary"
+	"rebound/internal/port/secondary"
 )
 
 // NewRouter creates an HTTP mux with all application routes registered.

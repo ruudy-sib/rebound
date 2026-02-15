@@ -3,7 +3,7 @@ package secondary
 import (
 	"context"
 
-	"kafkaretry/internal/domain/entity"
+	"rebound/internal/domain/entity"
 )
 
 // MessageProducer defines the secondary port for delivering messages

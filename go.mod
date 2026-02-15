@@ -1,4 +1,4 @@
-module kafkaretry
+module rebound
 
 go 1.23.1
 

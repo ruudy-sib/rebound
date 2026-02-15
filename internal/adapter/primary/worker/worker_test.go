@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/domain/entity"
+	"rebound/internal/domain/entity"
 )
 
 // mockTaskService implements primary.TaskService for worker tests.

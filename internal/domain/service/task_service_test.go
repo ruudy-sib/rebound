@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/domain"
-	"kafkaretry/internal/domain/entity"
+	"rebound/internal/domain"
+	"rebound/internal/domain/entity"
 )
 
 func TestTaskService_CreateTask(t *testing.T) {

@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/port/secondary"
 )
 
 // HealthHandler handles GET /health requests.

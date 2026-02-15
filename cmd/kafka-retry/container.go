@@ -8,14 +8,16 @@ import (
 	"go.uber.org/dig"
 	"go.uber.org/zap"
 
-	httphandler "kafkaretry/internal/adapter/primary/http"
-	"kafkaretry/internal/adapter/primary/worker"
-	"kafkaretry/internal/adapter/secondary/kafkaproducer"
-	"kafkaretry/internal/adapter/secondary/redisstore"
-	"kafkaretry/internal/config"
-	"kafkaretry/internal/domain/service"
-	"kafkaretry/internal/port/primary"
-	"kafkaretry/internal/port/secondary"
+	httphandler "rebound/internal/adapter/primary/http"
+	"rebound/internal/adapter/primary/worker"
+	"rebound/internal/adapter/secondary/httpproducer"
+	"rebound/internal/adapter/secondary/kafkaproducer"
+	"rebound/internal/adapter/secondary/producerfactory"
+	"rebound/internal/adapter/secondary/redisstore"
+	"rebound/internal/config"
+	"rebound/internal/domain/service"
+	"rebound/internal/port/primary"
+	"rebound/internal/port/secondary"
 )
 
 func buildContainer(ctx context.Context) (*dig.Container, error) {
@@ -61,9 +63,31 @@ func buildContainer(ctx context.Context) (*dig.Container, error) {
 		return nil, err
 	}
 
-	// Kafka producer (implements secondary.MessageProducer)
+	// Kafka producer
 	if err := c.Provide(func(cfg *config.Config, logger *zap.Logger) secondary.MessageProducer {
 		return kafkaproducer.NewProducer(cfg, logger)
+	}, dig.Name("kafka")); err != nil {
+		return nil, err
+	}
+
+	// HTTP producer
+	if err := c.Provide(func(cfg *config.Config, logger *zap.Logger) secondary.MessageProducer {
+		return httpproducer.NewProducer(cfg, logger)
+	}, dig.Name("http")); err != nil {
+		return nil, err
+	}
+
+	// Producer factory (implements secondary.MessageProducer)
+	// Routes messages to the appropriate producer based on destination type
+	type producerParams struct {
+		dig.In
+		KafkaProd secondary.MessageProducer `name:"kafka"`
+		HTTPProd  secondary.MessageProducer `name:"http"`
+		Logger    *zap.Logger
+	}
+
+	if err := c.Provide(func(params producerParams) secondary.MessageProducer {
+		return producerfactory.NewFactory(params.KafkaProd, params.HTTPProd, params.Logger)
 	}); err != nil {
 		return nil, err
 	}

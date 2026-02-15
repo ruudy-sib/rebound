@@ -3,7 +3,7 @@ package primary
 import (
 	"context"
 
-	"kafkaretry/internal/domain/entity"
+	"rebound/internal/domain/entity"
 )
 
 // TaskService defines the primary port for task operations

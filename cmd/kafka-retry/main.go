@@ -12,9 +12,9 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/adapter/primary/worker"
-	"kafkaretry/internal/config"
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/adapter/primary/worker"
+	"rebound/internal/config"
+	"rebound/internal/port/secondary"
 )
 
 const appName = "kafka-retry"

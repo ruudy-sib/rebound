@@ -5,7 +5,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/port/secondary"
 )
 
 // HealthCheck implements secondary.HealthChecker for Redis.

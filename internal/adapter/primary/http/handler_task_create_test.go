@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/domain"
+	"rebound/internal/domain"
 )
 
 func TestCreateTaskHandler_ServeHTTP(t *testing.T) {

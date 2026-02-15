@@ -8,9 +8,9 @@ import (
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/config"
-	"kafkaretry/internal/domain/entity"
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/config"
+	"rebound/internal/domain/entity"
+	"rebound/internal/port/secondary"
 )
 
 // Producer implements secondary.MessageProducer using segmentio/kafka-go.

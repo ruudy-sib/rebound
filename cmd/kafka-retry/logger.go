@@ -1,7 +1,7 @@
 package main
 
 import (
-	"kafkaretry/internal/config"
+	"rebound/internal/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

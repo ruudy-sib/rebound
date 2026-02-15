@@ -1,6 +1,6 @@
 package http
 
-import "kafkaretry/internal/domain/entity"
+import "rebound/internal/domain/entity"
 
 // CreateTaskRequest matches the OpenAPI Task schema.
 type CreateTaskRequest struct {

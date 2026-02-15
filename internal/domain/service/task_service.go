@@ -6,9 +6,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/domain"
-	"kafkaretry/internal/domain/entity"
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/domain"
+	"rebound/internal/domain/entity"
+	"rebound/internal/port/secondary"
 )
 
 // TaskService orchestrates task scheduling, processing, and retry logic.

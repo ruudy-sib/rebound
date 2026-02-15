@@ -3,8 +3,8 @@ package http
 import (
 	"context"
 
-	"kafkaretry/internal/domain/entity"
-	"kafkaretry/internal/port/secondary"
+	"rebound/internal/domain/entity"
+	"rebound/internal/port/secondary"
 )
 
 // mockTaskService implements primary.TaskService for testing.

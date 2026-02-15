@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"kafkaretry/internal/domain"
-	"kafkaretry/internal/port/primary"
+	"rebound/internal/domain"
+	"rebound/internal/port/primary"
 )
 
 // CreateTaskHandler handles POST /tasks requests.

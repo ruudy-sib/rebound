@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"kafkaretry/internal/domain/entity"
+	"rebound/internal/domain/entity"
 )
 
 // mockScheduler implements secondary.TaskScheduler for testing.
