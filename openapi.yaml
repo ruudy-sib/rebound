@@ -40,23 +40,27 @@ components:
   schemas:
     Destination:
       type: object
-      required:
-        - host
-        - port
-        - topic
+      description: |
+        Destination configuration varies by type:
+        - For Kafka: use host, port, and topic
+        - For HTTP: use url
       properties:
         host:
           type: string
-          description: Hostname or IP address
+          description: Hostname or IP address (required for Kafka)
           example: "localhost"
         port:
           type: string
-          description: Port number
+          description: Port number (required for Kafka)
           example: "9092"
         topic:
           type: string
-          description: Topic name
+          description: Topic name (required for Kafka)
           example: "my-topic"
+        url:
+          type: string
+          description: HTTP endpoint URL (required for HTTP)
+          example: "http://api.example.com/webhook"
 
     Task:
       type: object
@@ -110,5 +114,8 @@ components:
           example: "Email body structure"
         destination_type:
           type: string
-          description: Type of the destination (e.g., kafka, sqs)
+          description: Type of the destination
+          enum:
+            - kafka
+            - http
           example: "kafka"

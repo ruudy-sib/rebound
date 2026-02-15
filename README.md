@@ -68,11 +68,15 @@ The Kafka Retry Service acts as a centralized retry orchestration system for dis
                             │
 ┌───────────────────────────▼───────────────────────────────────┐
 │                    Secondary Adapters                          │
-│  ┌──────────────────┐              ┌──────────────────┐       │
-│  │  Redis Adapter   │              │  Kafka Adapter   │       │
-│  │  - Sorted Set    │              │  - Producer      │       │
-│  │  - Health Check  │              │                  │       │
-│  └──────────────────┘              └──────────────────┘       │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌─────────────┐ │
+│  │  Redis Adapter   │  │  Kafka Adapter   │  │HTTP Adapter │ │
+│  │  - Sorted Set    │  │  - Producer      │  │ - Webhooks  │ │
+│  │  - Health Check  │  │                  │  │             │ │
+│  └──────────────────┘  └──────────────────┘  └─────────────┘ │
+│                     ┌─────────────────────────────┐           │
+│                     │  Producer Factory           │           │
+│                     │  (Routes by destination)    │           │
+│                     └─────────────────────────────┘           │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -113,9 +117,11 @@ kafkaretry-poc/
 │       ├── primary/           # Input adapters
 │       │   ├── http/          # REST API handlers
 │       │   └── worker/        # Redis polling worker
-│       └── secondary/         # Output adapters
-│           ├── kafkaproducer/ # Kafka producer
-│           └── redisstore/    # Redis scheduler
+│       └── secondary/           # Output adapters
+│           ├── kafkaproducer/   # Kafka producer
+│           ├── httpproducer/    # HTTP webhook producer
+│           ├── producerfactory/ # Routes to correct producer
+│           └── redisstore/      # Redis scheduler
 ├── openapi.yaml               # API specification
 ├── docker-compose.yml         # Infrastructure setup
 ├── Dockerfile
@@ -276,9 +282,11 @@ curl http://localhost:8080/health
 
 ### Create Retry Task
 
-Submit a task to be retried with exponential backoff.
+Submit a task to be retried with exponential backoff. Supports both **Kafka** and **HTTP** destinations.
 
 **Endpoint:** `POST /tasks`
+
+#### Kafka Destination Example
 
 **Request Body:**
 ```json
@@ -304,26 +312,50 @@ Submit a task to be retried with exponential backoff.
 }
 ```
 
+#### HTTP Destination Example
+
+**Request Body:**
+```json
+{
+  "id": "webhook-task-789",
+  "source": "notification-service",
+  "destination": {
+    "url": "https://api.partner.com/webhooks/events"
+  },
+  "dead_destination": {
+    "url": "https://api.partner.com/webhooks/dlq"
+  },
+  "max_retries": 5,
+  "base_delay": 10,
+  "client_id": "partner-001",
+  "is_priority": false,
+  "message_data": "{\"event\": \"user.created\", \"user_id\": 789}",
+  "destination_type": "http"
+}
+```
+
 **Field Descriptions:**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `id` | string | Yes | Unique identifier for the task |
 | `source` | string | Yes | Source system or application name |
-| `destination.host` | string | Yes | Kafka broker hostname or IP |
-| `destination.port` | string | Yes | Kafka broker port |
-| `destination.topic` | string | Yes | Kafka topic for retries |
-| `dead_destination.host` | string | Yes | Dead letter queue broker host |
-| `dead_destination.port` | string | Yes | Dead letter queue broker port |
-| `dead_destination.topic` | string | Yes | Dead letter queue topic |
+| `destination.host` | string | Kafka only | Kafka broker hostname or IP |
+| `destination.port` | string | Kafka only | Kafka broker port |
+| `destination.topic` | string | Kafka only | Kafka topic for retries |
+| `destination.url` | string | HTTP only | HTTP endpoint URL for webhook delivery |
+| `dead_destination.host` | string | Kafka only | Dead letter queue broker host |
+| `dead_destination.port` | string | Kafka only | Dead letter queue broker port |
+| `dead_destination.topic` | string | Kafka only | Dead letter queue topic |
+| `dead_destination.url` | string | HTTP only | HTTP endpoint URL for dead letter delivery |
 | `max_retries` | int | Yes | Maximum retry attempts (0 or higher) |
 | `base_delay` | int | Yes | Base delay in seconds for exponential backoff |
 | `client_id` | string | Yes | Client identifier for tracking |
 | `is_priority` | boolean | No | Whether this is a priority task (default: false) |
 | `message_data` | string | Yes | The actual message/payload to be retried |
-| `destination_type` | string | Yes | Destination type (e.g., "kafka") |
+| `destination_type` | string | Yes | Destination type: `"kafka"` or `"http"` |
 
-**Example with cURL:**
+**Example with cURL (Kafka):**
 
 ```bash
 curl -X POST http://localhost:8080/tasks \
@@ -350,6 +382,29 @@ curl -X POST http://localhost:8080/tasks \
   }'
 ```
 
+**Example with cURL (HTTP):**
+
+```bash
+curl -X POST http://localhost:8080/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "webhook-task-789",
+    "source": "notification-service",
+    "destination": {
+      "url": "https://api.partner.com/webhooks/events"
+    },
+    "dead_destination": {
+      "url": "https://api.partner.com/webhooks/dlq"
+    },
+    "max_retries": 3,
+    "base_delay": 5,
+    "client_id": "partner-api",
+    "is_priority": false,
+    "message_data": "{\"event\": \"user.created\", \"user_id\": 789}",
+    "destination_type": "http"
+  }'
+```
+
 **Success Response (201 Created):**
 ```json
 {
@@ -373,7 +428,44 @@ curl -X POST http://localhost:8080/tasks \
 
 ## How It Works
 
-### 1. Task Submission Flow
+### 1. HTTP Webhook Delivery
+
+When using HTTP destinations, the service delivers messages via HTTP POST requests:
+
+**Request Headers:**
+```
+POST /webhooks/events HTTP/1.1
+Host: api.partner.com
+Content-Type: application/json
+X-Message-Key: task-123|2
+User-Agent: kafka-retry-service/1.0
+```
+
+**Request Body:**
+```json
+{
+  "event": "user.created",
+  "user_id": 789
+}
+```
+
+**Success Response (2xx):**
+- Any HTTP status code 200-299 is considered successful
+- Task is marked as complete
+- No further retries occur
+
+**Failure Response (non-2xx):**
+- HTTP status codes outside 200-299 trigger a retry
+- Task is rescheduled with exponential backoff
+- After max retries, sent to dead letter URL
+
+**Connection Settings:**
+- Timeout: 30 seconds
+- Max idle connections: 100
+- Max idle connections per host: 10
+- Idle connection timeout: 90 seconds
+
+### 2. Task Submission Flow
 
 ```
 Client                  HTTP Handler              Domain Service           Redis
@@ -392,10 +484,10 @@ Client                  HTTP Handler              Domain Service           Redis
   │<─────────────────────────┤                          │                    │
 ```
 
-### 2. Retry Processing Flow
+### 3. Retry Processing Flow
 
 ```
-Worker                  Redis                   Domain Service           Kafka
+Worker                  Redis                   Domain Service           Kafka/HTTP
   │                       │                          │                       │
   │  Poll every 1s        │                          │                       │
   ├──────────────────────>│                          │                       │
@@ -411,7 +503,7 @@ Worker                  Redis                   Domain Service           Kafka
   │                       │<─────────────────────────┤                       │
 ```
 
-### 3. Retry Logic
+### 4. Retry Logic
 
 **Exponential Backoff Formula:**
 ```
@@ -430,15 +522,28 @@ nextDelay = base_delay * (2 ^ (attempt - 1))
 - Future enhancement: Priority queue implementation for faster processing
 
 **Destination Types:**
-- Currently supported: `"kafka"`
-- Future support planned: `"sqs"`, `"pubsub"`, `"rabbitmq"`
+
+**Kafka (`"kafka"`)**
+- Messages sent to Kafka topics via Kafka producer
+- Requires: `host`, `port`, `topic`
+- Uses exponential backoff for retries
+- Failed messages routed to dead letter topic
+
+**HTTP (`"http"`)**
+- Messages sent via HTTP POST to webhook endpoints
+- Requires: `url`
+- Message sent as JSON in request body
+- Message key sent as `X-Message-Key` header
+- HTTP status 2xx = success, others = failure
+- Failed webhooks retried with exponential backoff
+- Exhausted retries sent to dead letter URL
 
 **After Max Retries Exceeded:**
 - Task is sent to `dead_destination` topic
 - Task is removed from Redis
 - No further retries occur
 
-### 4. Graceful Shutdown
+### 5. Graceful Shutdown
 
 ```
 SIGTERM/SIGINT received
@@ -752,8 +857,65 @@ For issues and questions:
 - Open an issue on GitHub
 - Contact: [your-email@example.com]
 
+## Examples
+
+The `examples/` directory contains ready-to-use scripts and tools:
+
+- **`create-tasks.sh`** - Create sample tasks with Kafka and HTTP destinations
+- **`webhook-receiver.go`** - Local HTTP server for testing webhooks
+- **`examples/README.md`** - Detailed testing guide
+
+See [examples/README.md](examples/README.md) for complete testing instructions.
+
+## Testing HTTP Webhooks Locally
+
+You can test HTTP webhook delivery using a local HTTP server:
+
+**1. Start a simple webhook receiver:**
+
+```bash
+# Using Python
+python3 -m http.server 8090
+
+# Or using Node.js
+npx http-server -p 8090
+```
+
+**2. Use a more sophisticated webhook testing tool:**
+
+```bash
+# Install webhook.site CLI or use ngrok
+ngrok http 8090
+```
+
+**3. Create a task with HTTP destination:**
+
+```bash
+curl -X POST http://localhost:8080/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "test-webhook-1",
+    "source": "test",
+    "destination": {
+      "url": "http://localhost:8090/webhook"
+    },
+    "dead_destination": {
+      "url": "http://localhost:8090/dlq"
+    },
+    "max_retries": 3,
+    "base_delay": 2,
+    "client_id": "test-client",
+    "is_priority": false,
+    "message_data": "{\"test\": \"data\"}",
+    "destination_type": "http"
+  }'
+```
+
+**4. Check the webhook receiver logs** to see the incoming POST request.
+
 ## Roadmap
 
+- [x] Support for HTTP webhook destinations
 - [ ] Add Prometheus metrics
 - [ ] Implement distributed tracing (OpenTelemetry)
 - [ ] Add admin API for task inspection
@@ -762,6 +924,7 @@ For issues and questions:
 - [ ] Web UI for monitoring
 - [ ] Support for custom backoff strategies
 - [ ] Integration with APM tools
+- [ ] Support for additional destination types (SQS, PubSub, RabbitMQ)
 
 ---
 
