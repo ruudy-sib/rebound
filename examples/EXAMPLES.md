@@ -187,6 +187,68 @@ go run examples/06-multi-tenant/main.go
 
 ---
 
+### 07. Consumer Benchmark with Retry Integration
+**File:** `07-consumer-benchmark/main.go`
+
+Kafka consumer that uses Rebound for intelligent retry handling. Includes comprehensive benchmarks to measure performance.
+
+**What you'll learn:**
+- Kafka consumer integration with Rebound
+- Automatic retry scheduling on failures
+- Dead letter queue handling
+- Performance benchmarking
+- Statistics tracking and monitoring
+
+**Run it:**
+```bash
+cd examples/07-consumer-benchmark
+
+# Start services
+make docker-up
+
+# Run consumer with default settings
+make run
+
+# Run with custom failure rate
+make run-high-failure
+```
+
+**Run benchmarks:**
+```bash
+# Quick benchmarks
+make benchmark
+
+# Comprehensive benchmark suite
+make benchmark-all
+
+# View results
+cat benchmark-results-latest/summary.md
+```
+
+**Output:**
+```
+=== Final Statistics ===
+{
+  "TotalMessages": 587,
+  "SuccessfulMessages": 411,
+  "RetriedMessages": 176,
+  "ErrorMessages": 0
+}
+
+Success Rate: 70.02%
+Retry Rate: 29.98%
+```
+
+**Performance Metrics:**
+- Task Creation: ~1,000 tasks/sec (sequential)
+- Task Creation: ~3,000 tasks/sec (parallel)
+- Message Processing: 500-1000 msgs/sec
+- Memory: ~50MB baseline + ~1KB per task
+
+**Use case:** Building resilient Kafka consumers with automatic retry logic and DLQ routing.
+
+---
+
 ## Quick Comparison
 
 | Example | Complexity | Best For | Key Feature |
@@ -197,6 +259,7 @@ go run examples/06-multi-tenant/main.go
 | 04 - DI | ⭐⭐⭐ | Production apps | Full lifecycle |
 | 05 - Payments | ⭐⭐⭐ | Complex logic | Smart retry |
 | 06 - Multi-tenant | ⭐⭐⭐ | SaaS platforms | Tenant isolation |
+| 07 - Consumer | ⭐⭐⭐ | Kafka consumers | Benchmarks + Stats |
 
 ---
 
