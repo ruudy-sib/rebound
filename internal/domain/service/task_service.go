@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -39,7 +40,7 @@ func (s *TaskService) CreateTask(ctx context.Context, task *entity.Task) error {
 
 	task.Attempt = 0
 
-	if err := s.scheduler.Schedule(ctx, task, 0); err != nil {
+	if err := s.scheduler.Schedule(ctx, task, time.Duration(task.BaseDelay)*time.Second); err != nil {
 		return fmt.Errorf("%w: %v", domain.ErrScheduleFailed, err)
 	}
 
