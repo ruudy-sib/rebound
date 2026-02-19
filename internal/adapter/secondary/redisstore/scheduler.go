@@ -122,6 +122,16 @@ func (s *Scheduler) Schedule(ctx context.Context, task *entity.Task, delay time.
 		return fmt.Errorf("scheduling task in redis: %w", err)
 	}
 
+	s.logger.Info("task saved to redis",
+		zap.String("task_id", task.ID),
+		zap.String("destination_type", string(task.DestinationType)),
+		zap.String("destination_url", task.Destination.URL),
+		zap.String("destination_topic", task.Destination.Topic),
+		zap.Int("attempt", task.Attempt),
+		zap.Duration("delay", delay),
+		zap.Float64("score", score),
+	)
+
 	return nil
 }
 
@@ -166,7 +176,15 @@ func (s *Scheduler) FetchDue(ctx context.Context, limit int) ([]*entity.Task, er
 			continue
 		}
 
-		tasks = append(tasks, toEntity(dto))
+		t := toEntity(dto)
+		s.logger.Info("task fetched from redis",
+			zap.String("task_id", t.ID),
+			zap.String("destination_type", string(t.DestinationType)),
+			zap.String("destination_url", t.Destination.URL),
+			zap.String("destination_topic", t.Destination.Topic),
+			zap.Int("attempt", t.Attempt),
+		)
+		tasks = append(tasks, t)
 	}
 
 	return tasks, nil
