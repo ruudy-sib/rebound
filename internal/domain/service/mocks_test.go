@@ -90,6 +90,26 @@ func (m *mockProducer) successfulProduceCalls() []produceCall {
 	return result
 }
 
+// testHTTPTask returns a standard HTTP test task fixture.
+func testHTTPTask() *entity.Task {
+	return &entity.Task{
+		ID:     "task-http-1",
+		Source: "test-app",
+		Destination: entity.Destination{
+			URL: "http://localhost:8090/webhook",
+		},
+		DeadDestination: entity.Destination{
+			URL: "http://localhost:8090/dead",
+		},
+		MaxRetries:      3,
+		BaseDelay:       2,
+		ClientID:        "client-1",
+		IsPriority:      false,
+		MessageData:     "test message data",
+		DestinationType: entity.DestinationTypeHTTP,
+	}
+}
+
 // testTask returns a standard test task fixture.
 func testTask() *entity.Task {
 	return &entity.Task{

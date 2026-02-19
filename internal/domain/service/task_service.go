@@ -87,7 +87,7 @@ func (s *TaskService) processTask(ctx context.Context, task *entity.Task) {
 
 func (s *TaskService) deliver(ctx context.Context, task *entity.Task) error {
 	switch task.DestinationType {
-	case entity.DestinationTypeKafka:
+	case entity.DestinationTypeKafka, entity.DestinationTypeHTTP:
 		key := []byte(fmt.Sprintf("%s|%d", task.ID, task.Attempt))
 		value := []byte(task.MessageData)
 		return s.producer.Produce(ctx, task.Destination, key, value)
@@ -120,7 +120,7 @@ func (s *TaskService) handleFailure(ctx context.Context, task *entity.Task, logg
 }
 
 func (s *TaskService) sendToDeadLetter(ctx context.Context, task *entity.Task, logger *zap.Logger) {
-	if task.DeadDestination.Topic == "" {
+	if task.DeadDestination.Topic == "" && task.DeadDestination.URL == "" {
 		logger.Warn("no dead-letter destination configured, dropping task")
 		return
 	}
