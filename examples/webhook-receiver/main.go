@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	successCount int64
-	failCount    int64
+	totalCount int64
+	failCount  int64
 )
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
@@ -22,14 +22,37 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	var payload map[string]interface{}
 	json.Unmarshal(body, &payload)
 
-	count := atomic.AddInt64(&successCount, 1)
-	fmt.Printf("[%s] ✓ /webhook (#%d) customer=%s event=%v\n",
+	eventType, _ := payload["event_type"].(string)
+	if eventType == "" {
+		eventType = string(body)
+	}
+
+	count := atomic.AddInt64(&totalCount, 1)
+
+	fmt.Printf("[%s] → /webhook (#%d) body=%s\n",
+		time.Now().Format("15:04:05"),
+		count,
+		string(body),
+	)
+
+	// Fail the first 2 attempts, succeed from the 3rd onwards
+	if count <= 2 {
+		atomic.AddInt64(&failCount, 1)
+		fmt.Printf("[%s] ✗ /webhook (#%d) returning 500 (simulated failure)\n",
+			time.Now().Format("15:04:05"),
+			count,
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"status":"error"}`))
+		return
+	}
+
+	fmt.Printf("[%s] ✓ /webhook (#%d) customer=%s event=%s\n",
 		time.Now().Format("15:04:05"),
 		count,
 		r.Header.Get("X-Webhook-Secret"),
-		payload["event_type"],
+		eventType,
 	)
-
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"ok"}`))
 }

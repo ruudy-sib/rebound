@@ -113,6 +113,9 @@ func (s *TaskService) handleFailure(ctx context.Context, task *entity.Task, logg
 	logger.Info("scheduling retry",
 		zap.Duration("delay", delay),
 		zap.Int("next_attempt", task.Attempt),
+		zap.String("destination_type", string(task.DestinationType)),
+		zap.String("destination_url", task.Destination.URL),
+		zap.String("destination_topic", task.Destination.Topic),
 	)
 
 	if err := s.scheduler.Schedule(ctx, task, delay); err != nil {

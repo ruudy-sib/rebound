@@ -21,6 +21,7 @@ type DestinationDTO struct {
 	Host  string `json:"host"`
 	Port  string `json:"port"`
 	Topic string `json:"topic"`
+	URL   string `json:"url"`
 }
 
 // CreateTaskResponse is returned on successful task creation.
@@ -49,11 +50,13 @@ func (r *CreateTaskRequest) toEntity() *entity.Task {
 			Host:  r.Destination.Host,
 			Port:  r.Destination.Port,
 			Topic: r.Destination.Topic,
+			URL:   r.Destination.URL,
 		},
 		DeadDestination: entity.Destination{
 			Host:  r.DeadDestination.Host,
 			Port:  r.DeadDestination.Port,
 			Topic: r.DeadDestination.Topic,
+			URL:   r.DeadDestination.URL,
 		},
 		MaxRetries:      r.MaxRetries,
 		BaseDelay:       r.BaseDelay,
