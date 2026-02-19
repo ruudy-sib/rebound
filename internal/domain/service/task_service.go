@@ -140,11 +140,14 @@ func (s *TaskService) validateTask(task *entity.Task) error {
 	if task.Source == "" {
 		return fmt.Errorf("source is required")
 	}
-	if task.Destination.Topic == "" {
-		return fmt.Errorf("destination topic is required")
-	}
 	if task.DestinationType == "" {
 		return fmt.Errorf("destination type is required")
+	}
+	if task.DestinationType == entity.DestinationTypeKafka && task.Destination.Topic == "" {
+		return fmt.Errorf("destination topic is required")
+	}
+	if task.DestinationType == entity.DestinationTypeHTTP && task.Destination.URL == "" {
+		return fmt.Errorf("destination URL is required")
 	}
 	if task.MaxRetries < 0 || task.MaxRetries > domain.MaxRetryLimit {
 		return fmt.Errorf("max_retries must be between 0 and %d", domain.MaxRetryLimit)

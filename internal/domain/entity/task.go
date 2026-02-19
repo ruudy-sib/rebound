@@ -10,6 +10,7 @@ type DestinationType string
 
 const (
 	DestinationTypeKafka DestinationType = "kafka"
+	DestinationTypeHTTP  DestinationType = "http"
 )
 
 // Task represents a retryable unit of work that delivers a message
