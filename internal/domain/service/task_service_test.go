@@ -177,6 +177,14 @@ func TestTaskService_CreateTask(t *testing.T) {
 			if tt.wantScheduled && tt.task.Attempt != 0 {
 				t.Fatalf("expected attempt reset to 0, got %d", tt.task.Attempt)
 			}
+
+			if tt.wantScheduled {
+				wantDelay := time.Duration(tt.task.BaseDelay) * time.Second
+				gotDelay := scheduler.scheduledTasks[0].Delay
+				if gotDelay != wantDelay {
+					t.Fatalf("expected initial delay %v, got %v", wantDelay, gotDelay)
+				}
+			}
 		})
 	}
 }
