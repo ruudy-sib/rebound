@@ -54,7 +54,6 @@ func DefaultConfig() *Config {
 		RedisAddr:    "localhost:6379",
 		RedisPassword: "",
 		RedisDB:      0,
-		KafkaBrokers: []string{"localhost:9092"},
 		PollInterval: 1 * time.Second,
 	}
 }
@@ -94,7 +93,12 @@ func New(cfg *Config) (*Rebound, error) {
 	scheduler := redisstore.NewScheduler(redisClient, logger)
 
 	// Create producers
-	kafkaProd := kafkaproducer.NewProducer(internalCfg, logger)
+	var kafkaProd secondary.MessageProducer
+	if len(cfg.KafkaBrokers) > 0 {
+		kafkaProd = kafkaproducer.NewProducer(internalCfg, logger)
+	} else {
+		kafkaProd = &noopKafkaProducer{}
+	}
 	httpProd := httpproducer.NewProducer(internalCfg, logger)
 	producer := producerfactory.NewFactory(kafkaProd, httpProd, logger)
 
@@ -205,6 +209,16 @@ type Destination struct {
 	// HTTP field
 	URL string
 }
+
+// noopKafkaProducer is used when no Kafka brokers are configured.
+// It returns a descriptive error if a Kafka destination is attempted.
+type noopKafkaProducer struct{}
+
+func (n *noopKafkaProducer) Produce(_ context.Context, _ entity.Destination, _, _ []byte) error {
+	return fmt.Errorf("kafka destination not supported: no brokers configured (set KafkaBrokers in Config)")
+}
+
+func (n *noopKafkaProducer) Close() error { return nil }
 
 // toDomain converts a public Task to an internal domain entity.
 func (t *Task) toDomain() *entity.Task {
