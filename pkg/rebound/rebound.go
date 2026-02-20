@@ -48,9 +48,6 @@ type Config struct {
 	// Cluster Redis (RedisMode = "cluster")
 	RedisClusterAddrs []string
 
-	// Kafka configuration (optional, only if using Kafka destinations)
-	KafkaBrokers []string
-
 	// Worker configuration
 	PollInterval time.Duration
 
@@ -93,7 +90,6 @@ func New(cfg *Config) (*Rebound, error) {
 		RedisMasterName:    cfg.RedisMasterName,
 		RedisSentinelAddrs: cfg.RedisSentinelAddrs,
 		RedisClusterAddrs:  cfg.RedisClusterAddrs,
-		KafkaBrokers:       cfg.KafkaBrokers,
 		PollInterval:       cfg.PollInterval,
 	}
 
@@ -106,13 +102,8 @@ func New(cfg *Config) (*Rebound, error) {
 	// Create scheduler
 	scheduler := redisstore.NewScheduler(redisClient, logger)
 
-	// Create producers
-	var kafkaProd secondary.MessageProducer
-	if len(cfg.KafkaBrokers) > 0 {
-		kafkaProd = kafkaproducer.NewProducer(internalCfg, logger)
-	} else {
-		kafkaProd = &noopKafkaProducer{}
-	}
+	// Create producers — Kafka connections are established per destination at delivery time.
+	kafkaProd := kafkaproducer.NewDestinationProducer(logger)
 	httpProd := httpproducer.NewProducer(internalCfg, logger)
 	producer := producerfactory.NewFactory(kafkaProd, httpProd, logger)
 
@@ -223,16 +214,6 @@ type Destination struct {
 	// HTTP field
 	URL string
 }
-
-// noopKafkaProducer is used when no Kafka brokers are configured.
-// It returns a descriptive error if a Kafka destination is attempted.
-type noopKafkaProducer struct{}
-
-func (n *noopKafkaProducer) Produce(_ context.Context, _ entity.Destination, _, _ []byte) error {
-	return fmt.Errorf("kafka destination not supported: no brokers configured (set KafkaBrokers in Config)")
-}
-
-func (n *noopKafkaProducer) Close() error { return nil }
 
 // toDomain converts a public Task to an internal domain entity.
 func (t *Task) toDomain() *entity.Task {

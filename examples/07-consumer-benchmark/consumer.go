@@ -58,7 +58,6 @@ func NewConsumer(cfg *ConsumerConfig) (*Consumer, error) {
 	// Create Rebound instance for retry logic
 	reboundCfg := &rebound.Config{
 		RedisAddr:    cfg.RedisAddr,
-		KafkaBrokers: cfg.KafkaBrokers,
 		PollInterval: 1 * time.Second,
 		Logger:       cfg.Logger,
 	}

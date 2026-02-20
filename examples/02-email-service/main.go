@@ -118,7 +118,6 @@ func main() {
 	// Configure Rebound
 	cfg := &rebound.Config{
 		RedisAddr:    "localhost:6379",
-		KafkaBrokers: []string{"localhost:9092"},
 		PollInterval: 1 * time.Second,
 		Logger:       logger,
 	}

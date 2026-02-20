@@ -21,9 +21,8 @@ import (
 
 // Config holds application configuration
 type Config struct {
-	HTTPPort     string
-	RedisAddr    string
-	KafkaBrokers []string
+	HTTPPort  string
+	RedisAddr string
 }
 
 // OrderService handles order processing with retry support
@@ -202,9 +201,8 @@ func buildContainer() (*dig.Container, error) {
 	// Provide configuration
 	container.Provide(func() *Config {
 		return &Config{
-			HTTPPort:     getEnv("HTTP_PORT", "8080"),
-			RedisAddr:    getEnv("REDIS_ADDR", "localhost:6379"),
-			KafkaBrokers: []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
+			HTTPPort:  getEnv("HTTP_PORT", "8080"),
+			RedisAddr: getEnv("REDIS_ADDR", "localhost:6379"),
 		}
 	})
 
@@ -220,7 +218,6 @@ func buildContainer() (*dig.Container, error) {
 	container.Provide(func(cfg *Config, logger *zap.Logger) *rebound.Config {
 		return &rebound.Config{
 			RedisAddr:    cfg.RedisAddr,
-			KafkaBrokers: cfg.KafkaBrokers,
 			PollInterval: 1 * time.Second,
 			Logger:       logger,
 		}
