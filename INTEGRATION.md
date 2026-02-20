@@ -65,7 +65,6 @@ func buildContainer() (*dig.Container, error) {
     container.Provide(func(logger *zap.Logger) *rebound.Config {
         return &rebound.Config{
             RedisAddr:    os.Getenv("REDIS_ADDR"),
-            KafkaBrokers: strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
             PollInterval: 1 * time.Second,
             Logger:       logger,
         }
@@ -338,7 +337,6 @@ func ProvideReboundConfig(logger *zap.Logger) *rebound.Config {
         RedisAddr:     os.Getenv("REDIS_ADDR"),
         RedisPassword: os.Getenv("REDIS_PASSWORD"),
         RedisDB:       getEnvInt("REDIS_DB", 0),
-        KafkaBrokers:  strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
         PollInterval:  getEnvDuration("REBOUND_POLL_INTERVAL", 1*time.Second),
         Logger:        logger,
     }

@@ -13,17 +13,10 @@ func NewReboundConfig(env string) *rebound.Config {
     switch env {
     case "production":
         cfg.RedisAddr = "redis.prod.svc.cluster.local:6379"
-        cfg.KafkaBrokers = []string{
-            "kafka-1.prod:9092",
-            "kafka-2.prod:9092",
-            "kafka-3.prod:9092",
-        }
     case "staging":
         cfg.RedisAddr = "redis.staging:6379"
-        cfg.KafkaBrokers = []string{"kafka.staging:9092"}
     default:
         cfg.RedisAddr = "localhost:6379"
-        cfg.KafkaBrokers = []string{"localhost:9092"}
     }
 
     return cfg
@@ -40,7 +33,6 @@ func ConfigFromEnv() *rebound.Config {
         RedisAddr:     getEnv("REDIS_ADDR", "localhost:6379"),
         RedisPassword: os.Getenv("REDIS_PASSWORD"),
         RedisDB:       getEnvInt("REDIS_DB", 0),
-        KafkaBrokers:  strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
         PollInterval:  getEnvDuration("POLL_INTERVAL", 1*time.Second),
     }
 }

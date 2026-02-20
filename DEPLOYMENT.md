@@ -55,7 +55,6 @@ import "rebound/pkg/rebound"
 // In your main.go
 rb, err := rebound.New(&rebound.Config{
     RedisAddr: "redis:6379",
-    KafkaBrokers: []string{"kafka:9092"},
 })
 rb.Start(ctx)
 

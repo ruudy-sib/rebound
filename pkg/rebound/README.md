@@ -41,7 +41,6 @@ func main() {
     // Configure Rebound
     cfg := &rebound.Config{
         RedisAddr:    "localhost:6379",
-        KafkaBrokers: []string{"localhost:9092"},
         PollInterval: 1 * time.Second,
     }
 
@@ -103,7 +102,6 @@ func main() {
     container.Provide(func(logger *zap.Logger) *rebound.Config {
         return &rebound.Config{
             RedisAddr:    "redis.production.svc.cluster.local:6379",
-            KafkaBrokers: []string{"kafka-1:9092", "kafka-2:9092"},
             PollInterval: 1 * time.Second,
             Logger:       logger,
         }
@@ -189,9 +187,6 @@ type Config struct {
     RedisPassword string
     RedisDB       int
 
-    // Kafka configuration (required if using Kafka destinations)
-    KafkaBrokers []string
-
     // Worker configuration
     PollInterval time.Duration // Default: 1s
 
@@ -208,7 +203,6 @@ func NewConfigFromEnv() *rebound.Config {
         RedisAddr:    os.Getenv("REDIS_ADDR"),
         RedisPassword: os.Getenv("REDIS_PASSWORD"),
         RedisDB:      getEnvInt("REDIS_DB", 0),
-        KafkaBrokers: strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
         PollInterval: getEnvDuration("POLL_INTERVAL", 1*time.Second),
     }
 }

@@ -354,7 +354,6 @@ func main() {
     // Create Rebound
     rb, _ := rebound.New(&rebound.Config{
         RedisAddr: "localhost:6379",
-        KafkaBrokers: []string{"localhost:9092"},
         Logger: logger,
     })
     defer rb.Close()

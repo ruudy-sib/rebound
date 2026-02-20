@@ -33,7 +33,6 @@ func main() {
     // Create Rebound
     rb, _ := rebound.New(&rebound.Config{
         RedisAddr: "localhost:6379",
-        KafkaBrokers: []string{"localhost:9092"},
         Logger: logger,
     })
     defer rb.Close()
@@ -243,7 +242,6 @@ cfg := &rebound.Config{
     RedisAddr:     os.Getenv("REDIS_ADDR"),
     RedisPassword: os.Getenv("REDIS_PASSWORD"),
     RedisDB:       0,
-    KafkaBrokers:  strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
     PollInterval:  1 * time.Second,
     Logger:        logger,
 }
