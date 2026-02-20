@@ -12,18 +12,19 @@ func NewReboundConfig(env string) *rebound.Config {
 
     switch env {
     case "production":
-        cfg.RedisAddr = "redis.prod.svc.cluster.local:6379"
-        cfg.KafkaBrokers = []string{
-            "kafka-1.prod:9092",
-            "kafka-2.prod:9092",
-            "kafka-3.prod:9092",
+        cfg.RedisMode          = "sentinel"
+        cfg.RedisMasterName    = "mymaster"
+        cfg.RedisSentinelAddrs = []string{
+            "sentinel-1.prod:26379",
+            "sentinel-2.prod:26379",
+            "sentinel-3.prod:26379",
         }
+        // cfg.KafkaBrokers = []string{"kafka-1.prod:9092", "kafka-2.prod:9092"} // optional
     case "staging":
         cfg.RedisAddr = "redis.staging:6379"
-        cfg.KafkaBrokers = []string{"kafka.staging:9092"}
+        // cfg.KafkaBrokers = []string{"kafka.staging:9092"} // optional
     default:
         cfg.RedisAddr = "localhost:6379"
-        cfg.KafkaBrokers = []string{"localhost:9092"}
     }
 
     return cfg
@@ -36,13 +37,26 @@ func NewReboundConfig(env string) *rebound.Config {
 import "os"
 
 func ConfigFromEnv() *rebound.Config {
-    return &rebound.Config{
+    cfg := &rebound.Config{
+        RedisMode:     getEnv("REDIS_MODE", "standalone"),
         RedisAddr:     getEnv("REDIS_ADDR", "localhost:6379"),
         RedisPassword: os.Getenv("REDIS_PASSWORD"),
         RedisDB:       getEnvInt("REDIS_DB", 0),
-        KafkaBrokers:  strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
         PollInterval:  getEnvDuration("POLL_INTERVAL", 1*time.Second),
     }
+    if v := os.Getenv("REDIS_MASTER_NAME"); v != "" {
+        cfg.RedisMasterName = v
+    }
+    if v := os.Getenv("REDIS_SENTINEL_ADDRS"); v != "" {
+        cfg.RedisSentinelAddrs = strings.Split(v, ",")
+    }
+    if v := os.Getenv("REDIS_CLUSTER_ADDRS"); v != "" {
+        cfg.RedisClusterAddrs = strings.Split(v, ",")
+    }
+    if v := os.Getenv("KAFKA_BROKERS"); v != "" {
+        cfg.KafkaBrokers = strings.Split(v, ",")
+    }
+    return cfg
 }
 
 func getEnv(key, fallback string) string {
@@ -340,10 +354,18 @@ spec:
       - name: order-service
         image: order-service:latest
         env:
+        - name: REDIS_MODE
+          value: "standalone"  # or "sentinel" or "cluster"
         - name: REDIS_ADDR
           value: "redis.default.svc.cluster.local:6379"
-        - name: KAFKA_BROKERS
-          value: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
+        # Sentinel HA:
+        # - name: REDIS_MASTER_NAME
+        #   value: "mymaster"
+        # - name: REDIS_SENTINEL_ADDRS
+        #   value: "sentinel-1:26379,sentinel-2:26379"
+        # Kafka (optional):
+        # - name: KAFKA_BROKERS
+        #   value: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
         - name: POLL_INTERVAL
           value: "1s"
         resources:
@@ -525,7 +547,8 @@ Migrating from manual retry logic to Rebound:
 - [ ] Identify all manual retry loops in codebase
 - [ ] Design retry strategies (critical, high, normal, low)
 - [ ] Configure Redis connection
-- [ ] Set up Kafka brokers (if using Kafka destinations)
+- [ ] Set up Kafka brokers (optional: only if using Kafka destinations)
+- [ ] Choose Redis mode: standalone / sentinel / cluster
 - [ ] Implement Rebound initialization
 - [ ] Replace manual retry with `CreateTask` calls
 - [ ] Configure dead letter destinations
