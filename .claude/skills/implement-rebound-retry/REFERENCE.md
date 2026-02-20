@@ -19,10 +19,8 @@ func NewReboundConfig(env string) *rebound.Config {
             "sentinel-2.prod:26379",
             "sentinel-3.prod:26379",
         }
-        // cfg.KafkaBrokers = []string{"kafka-1.prod:9092", "kafka-2.prod:9092"} // optional
     case "staging":
         cfg.RedisAddr = "redis.staging:6379"
-        // cfg.KafkaBrokers = []string{"kafka.staging:9092"} // optional
     default:
         cfg.RedisAddr = "localhost:6379"
     }
@@ -52,9 +50,6 @@ func ConfigFromEnv() *rebound.Config {
     }
     if v := os.Getenv("REDIS_CLUSTER_ADDRS"); v != "" {
         cfg.RedisClusterAddrs = strings.Split(v, ",")
-    }
-    if v := os.Getenv("KAFKA_BROKERS"); v != "" {
-        cfg.KafkaBrokers = strings.Split(v, ",")
     }
     return cfg
 }

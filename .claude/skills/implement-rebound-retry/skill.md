@@ -49,7 +49,6 @@ func main() {
         PollInterval: 1 * time.Second,
         Logger:       logger,
         // RedisMode: "sentinel", // or "cluster" — default is "standalone"
-        // KafkaBrokers: []string{"localhost:9092"}, // optional: only for Kafka destinations
     }
 
     // Create instance
@@ -215,7 +214,6 @@ func main() {
             PollInterval: 1 * time.Second,
             Logger:       logger,
             // RedisMode: "sentinel", // uncomment for HA
-            // KafkaBrokers: []string{"kafka-1:9092", "kafka-2:9092"}, // optional
         }
     })
 
