@@ -9,9 +9,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"rebound/internal/domain"
-	"rebound/internal/domain/entity"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/domain"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // taskDTO is the Redis-specific representation of a task.
@@ -92,13 +92,13 @@ func toEntity(dto taskDTO) *entity.Task {
 // Scheduler implements secondary.TaskScheduler using a Redis sorted set.
 // Tasks are scored by their scheduled execution time (Unix timestamp).
 type Scheduler struct {
-	client *redis.Client
+	client redis.UniversalClient
 	key    string
 	logger *zap.Logger
 }
 
 // NewScheduler creates a Redis-backed task scheduler.
-func NewScheduler(client *redis.Client, logger *zap.Logger) secondary.TaskScheduler {
+func NewScheduler(client redis.UniversalClient, logger *zap.Logger) secondary.TaskScheduler {
 	return &Scheduler{
 		client: client,
 		key:    domain.RedisRetryKey,

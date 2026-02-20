@@ -8,16 +8,16 @@ import (
 	"go.uber.org/dig"
 	"go.uber.org/zap"
 
-	httphandler "rebound/internal/adapter/primary/http"
-	"rebound/internal/adapter/primary/worker"
-	"rebound/internal/adapter/secondary/httpproducer"
-	"rebound/internal/adapter/secondary/kafkaproducer"
-	"rebound/internal/adapter/secondary/producerfactory"
-	"rebound/internal/adapter/secondary/redisstore"
-	"rebound/internal/config"
-	"rebound/internal/domain/service"
-	"rebound/internal/port/primary"
-	"rebound/internal/port/secondary"
+	httphandler "github.com/ruudy-sib/rebound/internal/adapter/primary/http"
+	"github.com/ruudy-sib/rebound/internal/adapter/primary/worker"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/httpproducer"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/kafkaproducer"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/producerfactory"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/redisstore"
+	"github.com/ruudy-sib/rebound/internal/config"
+	"github.com/ruudy-sib/rebound/internal/domain/service"
+	"github.com/ruudy-sib/rebound/internal/port/primary"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 func buildContainer(ctx context.Context) (*dig.Container, error) {
@@ -36,21 +36,21 @@ func buildContainer(ctx context.Context) (*dig.Container, error) {
 	// --- Secondary Adapters (infrastructure) ---
 
 	// Redis client
-	if err := c.Provide(func(cfg *config.Config, logger *zap.Logger) (*goredis.Client, error) {
+	if err := c.Provide(func(cfg *config.Config, logger *zap.Logger) (goredis.UniversalClient, error) {
 		return redisstore.NewClient(ctx, cfg, logger)
 	}); err != nil {
 		return nil, err
 	}
 
 	// Task scheduler (implements secondary.TaskScheduler)
-	if err := c.Provide(func(client *goredis.Client, logger *zap.Logger) secondary.TaskScheduler {
+	if err := c.Provide(func(client goredis.UniversalClient, logger *zap.Logger) secondary.TaskScheduler {
 		return redisstore.NewScheduler(client, logger)
 	}); err != nil {
 		return nil, err
 	}
 
 	// Redis health check (implements secondary.HealthChecker)
-	if err := c.Provide(func(client *goredis.Client) secondary.HealthChecker {
+	if err := c.Provide(func(client goredis.UniversalClient) secondary.HealthChecker {
 		return redisstore.NewHealthCheck(client)
 	}); err != nil {
 		return nil, err

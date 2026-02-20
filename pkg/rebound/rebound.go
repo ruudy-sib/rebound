@@ -8,16 +8,16 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"rebound/internal/adapter/primary/worker"
-	"rebound/internal/adapter/secondary/httpproducer"
-	"rebound/internal/adapter/secondary/kafkaproducer"
-	"rebound/internal/adapter/secondary/producerfactory"
-	"rebound/internal/adapter/secondary/redisstore"
-	"rebound/internal/config"
-	"rebound/internal/domain/entity"
-	"rebound/internal/domain/service"
-	"rebound/internal/port/primary"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/adapter/primary/worker"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/httpproducer"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/kafkaproducer"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/producerfactory"
+	"github.com/ruudy-sib/rebound/internal/adapter/secondary/redisstore"
+	"github.com/ruudy-sib/rebound/internal/config"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/domain/service"
+	"github.com/ruudy-sib/rebound/internal/port/primary"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // Rebound is the main entry point for the retry service.
@@ -26,17 +26,27 @@ type Rebound struct {
 	taskService primary.TaskService
 	worker      *worker.Worker
 	producer    secondary.MessageProducer
-	redisClient *goredis.Client
+	redisClient goredis.UniversalClient
 	logger      *zap.Logger
 	config      *Config
 }
 
 // Config holds configuration for Rebound.
 type Config struct {
-	// Redis configuration
+	// Redis mode: "standalone" (default), "sentinel", "cluster"
+	RedisMode string
+
+	// Standalone Redis
 	RedisAddr     string
 	RedisPassword string
 	RedisDB       int
+
+	// Sentinel Redis (RedisMode = "sentinel")
+	RedisMasterName    string
+	RedisSentinelAddrs []string
+
+	// Cluster Redis (RedisMode = "cluster")
+	RedisClusterAddrs []string
 
 	// Kafka configuration (optional, only if using Kafka destinations)
 	KafkaBrokers []string
@@ -76,11 +86,15 @@ func New(cfg *Config) (*Rebound, error) {
 
 	// Convert to internal config format
 	internalCfg := &config.Config{
-		RedisAddr:     cfg.RedisAddr,
-		RedisPassword: cfg.RedisPassword,
-		RedisDB:       cfg.RedisDB,
-		KafkaBrokers:  cfg.KafkaBrokers,
-		PollInterval:  cfg.PollInterval,
+		RedisMode:          cfg.RedisMode,
+		RedisAddr:          cfg.RedisAddr,
+		RedisPassword:      cfg.RedisPassword,
+		RedisDB:            cfg.RedisDB,
+		RedisMasterName:    cfg.RedisMasterName,
+		RedisSentinelAddrs: cfg.RedisSentinelAddrs,
+		RedisClusterAddrs:  cfg.RedisClusterAddrs,
+		KafkaBrokers:       cfg.KafkaBrokers,
+		PollInterval:       cfg.PollInterval,
 	}
 
 	// Create Redis client
