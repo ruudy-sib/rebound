@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/pkg/rebound"
+	"github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 // Example 5: Payment Processing with Smart Retry

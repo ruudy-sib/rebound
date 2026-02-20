@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/pkg/rebound"
+	"github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 // Example 3: Webhook Delivery Service

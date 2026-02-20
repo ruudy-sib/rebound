@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
 )
 
 // mockScheduler implements secondary.TaskScheduler for testing.

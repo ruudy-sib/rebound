@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/port/primary"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/port/primary"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // NewRouter creates an HTTP mux with all application routes registered.

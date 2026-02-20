@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // HealthHandler handles GET /health requests.

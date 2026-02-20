@@ -9,7 +9,7 @@ import (
 	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 
-	"rebound/pkg/rebound"
+	"github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 // Consumer represents a Kafka consumer that uses Rebound for retry logic.

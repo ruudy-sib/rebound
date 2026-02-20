@@ -1,6 +1,6 @@
 package http
 
-import "rebound/internal/domain/entity"
+import "github.com/ruudy-sib/rebound/internal/domain/entity"
 
 // CreateTaskRequest matches the OpenAPI Task schema.
 type CreateTaskRequest struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
 )
 
 // TaskScheduler defines the secondary port for scheduling and retrieving

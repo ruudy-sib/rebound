@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/port/primary"
+	"github.com/ruudy-sib/rebound/internal/port/primary"
 )
 
 // Worker polls for due tasks at regular intervals and processes them.

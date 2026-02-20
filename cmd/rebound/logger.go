@@ -1,7 +1,7 @@
 package main
 
 import (
-	"rebound/internal/config"
+	"github.com/ruudy-sib/rebound/internal/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

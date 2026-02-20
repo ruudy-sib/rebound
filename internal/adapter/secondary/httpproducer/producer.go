@@ -10,9 +10,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/config"
-	"rebound/internal/domain/entity"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/config"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // Producer implements secondary.MessageProducer using HTTP POST requests.
@@ -55,7 +55,7 @@ func (p *Producer) Produce(ctx context.Context, destination entity.Destination, 
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Message-Key", string(key))
-	req.Header.Set("User-Agent", "rebound/1.0")
+	req.Header.Set("User-Agent", "github.com/ruudy-sib/rebound/1.0")
 
 	resp, err := p.client.Do(req)
 	if err != nil {

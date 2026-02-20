@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/domain"
+	"github.com/ruudy-sib/rebound/internal/domain"
 )
 
 func TestCreateTaskHandler_ServeHTTP(t *testing.T) {

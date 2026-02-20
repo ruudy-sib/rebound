@@ -9,7 +9,7 @@ import (
 	"go.uber.org/dig"
 	"go.uber.org/zap"
 
-	"rebound/pkg/rebound"
+	"github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 // Example_basic demonstrates basic usage of Rebound as a library.

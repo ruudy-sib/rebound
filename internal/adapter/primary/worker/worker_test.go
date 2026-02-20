@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
 )
 
 // mockTaskService implements primary.TaskService for worker tests.

@@ -6,8 +6,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/domain/entity"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // Factory routes message production to the appropriate producer based on destination type.

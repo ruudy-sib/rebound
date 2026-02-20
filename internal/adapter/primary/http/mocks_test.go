@@ -3,8 +3,8 @@ package http
 import (
 	"context"
 
-	"rebound/internal/domain/entity"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // mockTaskService implements primary.TaskService for testing.

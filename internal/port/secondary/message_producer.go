@@ -3,7 +3,7 @@ package secondary
 import (
 	"context"
 
-	"rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
 )
 
 // MessageProducer defines the secondary port for delivering messages

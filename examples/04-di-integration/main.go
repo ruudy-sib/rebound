@@ -13,7 +13,7 @@ import (
 	"go.uber.org/dig"
 	"go.uber.org/zap"
 
-	"rebound/pkg/rebound"
+	"github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 // Example 4: Dependency Injection Integration
