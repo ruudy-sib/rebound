@@ -24,7 +24,6 @@ func main() {
 		RedisAddr:    "localhost:6379",
 		RedisPassword: "",
 		RedisDB:      0,
-		KafkaBrokers: []string{"localhost:9092"},
 		PollInterval: 1 * time.Second,
 		Logger:       logger,
 	}
