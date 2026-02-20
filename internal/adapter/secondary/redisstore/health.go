@@ -5,16 +5,16 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // HealthCheck implements secondary.HealthChecker for Redis.
 type HealthCheck struct {
-	client *redis.Client
+	client redis.UniversalClient
 }
 
 // NewHealthCheck creates a Redis health checker.
-func NewHealthCheck(client *redis.Client) secondary.HealthChecker {
+func NewHealthCheck(client redis.UniversalClient) secondary.HealthChecker {
 	return &HealthCheck{client: client}
 }
 
