@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/pkg/rebound"
+	"github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 // Example 6: Multi-Tenant Service with Tenant-Specific Retry Policies

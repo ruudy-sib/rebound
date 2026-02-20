@@ -12,9 +12,9 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"rebound/internal/adapter/primary/worker"
-	"rebound/internal/config"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/adapter/primary/worker"
+	"github.com/ruudy-sib/rebound/internal/config"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 const appName = "rebound"

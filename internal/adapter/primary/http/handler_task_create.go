@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/domain"
-	"rebound/internal/port/primary"
+	"github.com/ruudy-sib/rebound/internal/domain"
+	"github.com/ruudy-sib/rebound/internal/port/primary"
 )
 
 // CreateTaskHandler handles POST /tasks requests.

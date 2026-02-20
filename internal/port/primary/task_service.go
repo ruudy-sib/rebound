@@ -3,7 +3,7 @@ package primary
 import (
 	"context"
 
-	"rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
 )
 
 // TaskService defines the primary port for task operations

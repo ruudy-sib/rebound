@@ -7,9 +7,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/domain"
-	"rebound/internal/domain/entity"
-	"rebound/internal/port/secondary"
+	"github.com/ruudy-sib/rebound/internal/domain"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/port/secondary"
 )
 
 // TaskService orchestrates task scheduling, processing, and retry logic.

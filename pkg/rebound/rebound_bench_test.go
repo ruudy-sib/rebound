@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/pkg/rebound"
+	"github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 // BenchmarkTaskCreation benchmarks the task creation throughput.

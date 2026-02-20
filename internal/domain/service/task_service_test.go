@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"rebound/internal/domain"
-	"rebound/internal/domain/entity"
+	"github.com/ruudy-sib/rebound/internal/domain"
+	"github.com/ruudy-sib/rebound/internal/domain/entity"
 )
 
 func TestTaskService_CreateTask(t *testing.T) {

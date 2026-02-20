@@ -1,4 +1,4 @@
-module rebound
+module github.com/ruudy-sib/rebound
 
 go 1.23.1
 
