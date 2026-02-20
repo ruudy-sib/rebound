@@ -14,7 +14,7 @@ Best for: **New Go microservices at Brevo**
 docker-compose up -d redis kafka
 
 # Your go.mod
-go get rebound/pkg/rebound
+go get github.com/ruudy-sib/rebound/pkg/rebound
 ```
 
 **Step 2:** Add to your service
@@ -23,7 +23,7 @@ package main
 
 import (
     "context"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -33,7 +33,6 @@ func main() {
     // Create Rebound
     rb, _ := rebound.New(&rebound.Config{
         RedisAddr: "localhost:6379",
-        KafkaBrokers: []string{"localhost:9092"},
         Logger: logger,
     })
     defer rb.Close()
@@ -220,13 +219,23 @@ rb.CreateTask(ctx, &rebound.Task{
 ### Environment Variables
 
 ```bash
-# Redis
+# Redis (standalone - default)
+export REDIS_MODE=standalone
 export REDIS_ADDR=localhost:6379
 export REDIS_PASSWORD=your-password
 export REDIS_DB=0
 
+# Redis Sentinel (high availability)
+# export REDIS_MODE=sentinel
+# export REDIS_MASTER_NAME=mymaster
+# export REDIS_SENTINEL_ADDRS=sentinel-1:26379,sentinel-2:26379
+
+# Redis Cluster
+# export REDIS_MODE=cluster
+# export REDIS_CLUSTER_ADDRS=node-1:7000,node-2:7001,node-3:7002
+
 # Kafka (optional, only if using Kafka destinations)
-export KAFKA_BROKERS=localhost:9092
+# export KAFKA_BROKERS=localhost:9092
 
 # Worker
 export POLL_INTERVAL=1s
@@ -240,12 +249,19 @@ export ENVIRONMENT=production
 
 ```go
 cfg := &rebound.Config{
+    RedisMode:     os.Getenv("REDIS_MODE"), // "standalone" (default), "sentinel", "cluster"
     RedisAddr:     os.Getenv("REDIS_ADDR"),
     RedisPassword: os.Getenv("REDIS_PASSWORD"),
     RedisDB:       0,
-    KafkaBrokers:  strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
-    PollInterval:  1 * time.Second,
-    Logger:        logger,
+    // Sentinel fields (only when RedisMode="sentinel")
+    RedisMasterName:    os.Getenv("REDIS_MASTER_NAME"),
+    RedisSentinelAddrs: splitEnv("REDIS_SENTINEL_ADDRS"),
+    // Cluster fields (only when RedisMode="cluster")
+    RedisClusterAddrs: splitEnv("REDIS_CLUSTER_ADDRS"),
+    // Kafka (optional: only set if using Kafka destinations)
+    // KafkaBrokers: splitEnv("KAFKA_BROKERS"),
+    PollInterval: 1 * time.Second,
+    Logger:       logger,
 }
 
 rb, _ := rebound.New(cfg)

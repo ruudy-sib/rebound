@@ -50,12 +50,12 @@ Rebound can be deployed in three ways, each with different trade-offs:
 ### Usage
 
 ```go
-import "rebound/pkg/rebound"
+import "github.com/ruudy-sib/rebound/pkg/rebound"
 
 // In your main.go
 rb, err := rebound.New(&rebound.Config{
     RedisAddr: "redis:6379",
-    KafkaBrokers: []string{"kafka:9092"},
+    // KafkaBrokers: []string{"kafka:9092"}, // optional: only for Kafka destinations
 })
 rb.Start(ctx)
 
@@ -129,8 +129,8 @@ docker run -d \
   --name rebound \
   -p 8080:8080 \
   -e REDIS_ADDR=redis:6379 \
-  -e KAFKA_BROKERS=kafka:9092 \
   rebound:latest
+  # Add -e KAFKA_BROKERS=kafka:9092 only if using Kafka destinations
 ```
 
 **Docker Compose:**
@@ -143,7 +143,7 @@ services:
       - "8080:8080"
     environment:
       - REDIS_ADDR=redis:6379
-      - KAFKA_BROKERS=kafka:9092
+      # - KAFKA_BROKERS=kafka:9092  # optional: only for Kafka destinations
     depends_on:
       - redis
       - kafka
@@ -173,8 +173,10 @@ spec:
         env:
         - name: REDIS_ADDR
           value: "redis.prod.svc.cluster.local:6379"
-        - name: KAFKA_BROKERS
-          value: "kafka-1:9092,kafka-2:9092"
+        - name: REDIS_MODE
+          value: "standalone"  # or "sentinel" or "cluster"
+        # - name: KAFKA_BROKERS  # optional: only if using Kafka destinations
+        #   value: "kafka-1:9092,kafka-2:9092"
         resources:
           requests:
             memory: "256Mi"
@@ -314,8 +316,10 @@ spec:
     env:
     - name: REDIS_ADDR
       value: "redis.prod.svc.cluster.local:6379"
-    - name: KAFKA_BROKERS
-      value: "kafka:9092"
+    - name: REDIS_MODE
+      value: "standalone"  # or "sentinel" or "cluster"
+    # - name: KAFKA_BROKERS  # optional: only if using Kafka destinations
+    #   value: "kafka:9092"
     resources:
       requests:
         memory: "128Mi"

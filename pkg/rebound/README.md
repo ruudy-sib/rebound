@@ -15,11 +15,7 @@ Rebound is a Go library for building resilient applications with intelligent ret
 ## Installation
 
 ```bash
-# Add to your go.mod (when published):
-# go get github.com/your-org/rebound
-
-# For local development:
-# Replace "github.com/your-org/rebound" with your actual module path
+go get github.com/ruudy-sib/rebound/pkg/rebound
 ```
 
 ## Quick Start
@@ -34,15 +30,15 @@ import (
     "log"
     "time"
 
-    "github.com/brevo/rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 func main() {
     // Configure Rebound
     cfg := &rebound.Config{
         RedisAddr:    "localhost:6379",
-        KafkaBrokers: []string{"localhost:9092"},
         PollInterval: 1 * time.Second,
+        // KafkaBrokers: []string{"localhost:9092"}, // optional: only for Kafka destinations
     }
 
     // Create instance
@@ -92,7 +88,7 @@ import (
     "context"
 
     "github.com/brevo/golang-libraries/di"
-    "github.com/brevo/rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -103,9 +99,9 @@ func main() {
     container.Provide(func(logger *zap.Logger) *rebound.Config {
         return &rebound.Config{
             RedisAddr:    "redis.production.svc.cluster.local:6379",
-            KafkaBrokers: []string{"kafka-1:9092", "kafka-2:9092"},
             PollInterval: 1 * time.Second,
             Logger:       logger,
+            // KafkaBrokers: []string{"kafka-1:9092", "kafka-2:9092"}, // optional
         }
     })
 
@@ -128,7 +124,7 @@ package handler
 import (
     "net/http"
 
-    "github.com/brevo/rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -184,12 +180,22 @@ func (h *OrderHandler) ProcessOrder(w http.ResponseWriter, r *http.Request) {
 
 ```go
 type Config struct {
-    // Redis configuration (required)
+    // Redis mode: "standalone" (default), "sentinel", "cluster"
+    RedisMode string
+
+    // Standalone Redis (RedisMode = "standalone")
     RedisAddr     string
     RedisPassword string
     RedisDB       int
 
-    // Kafka configuration (required if using Kafka destinations)
+    // Sentinel Redis (RedisMode = "sentinel")
+    RedisMasterName    string
+    RedisSentinelAddrs []string
+
+    // Cluster Redis (RedisMode = "cluster")
+    RedisClusterAddrs []string
+
+    // Kafka (optional: only needed for Kafka destinations)
     KafkaBrokers []string
 
     // Worker configuration
@@ -204,13 +210,60 @@ type Config struct {
 
 ```go
 func NewConfigFromEnv() *rebound.Config {
-    return &rebound.Config{
-        RedisAddr:    os.Getenv("REDIS_ADDR"),
+    cfg := &rebound.Config{
+        RedisMode:     getEnv("REDIS_MODE", "standalone"),
+        RedisAddr:     os.Getenv("REDIS_ADDR"),
         RedisPassword: os.Getenv("REDIS_PASSWORD"),
-        RedisDB:      getEnvInt("REDIS_DB", 0),
-        KafkaBrokers: strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
-        PollInterval: getEnvDuration("POLL_INTERVAL", 1*time.Second),
+        RedisDB:       getEnvInt("REDIS_DB", 0),
+        PollInterval:  getEnvDuration("POLL_INTERVAL", 1*time.Second),
     }
+    // Sentinel
+    if v := os.Getenv("REDIS_MASTER_NAME"); v != "" {
+        cfg.RedisMasterName = v
+    }
+    if v := os.Getenv("REDIS_SENTINEL_ADDRS"); v != "" {
+        cfg.RedisSentinelAddrs = strings.Split(v, ",")
+    }
+    // Cluster
+    if v := os.Getenv("REDIS_CLUSTER_ADDRS"); v != "" {
+        cfg.RedisClusterAddrs = strings.Split(v, ",")
+    }
+    // Kafka (optional)
+    if v := os.Getenv("KAFKA_BROKERS"); v != "" {
+        cfg.KafkaBrokers = strings.Split(v, ",")
+    }
+    return cfg
+}
+```
+
+### Redis Modes
+
+Rebound supports three Redis deployment modes:
+
+**Standalone (default):**
+```go
+cfg := &rebound.Config{
+    RedisMode: "standalone", // or leave empty
+    RedisAddr: "localhost:6379",
+}
+```
+
+**Sentinel (high availability):**
+```go
+cfg := &rebound.Config{
+    RedisMode:          "sentinel",
+    RedisMasterName:    "mymaster",
+    RedisSentinelAddrs: []string{"sentinel-1:26379", "sentinel-2:26379", "sentinel-3:26379"},
+    RedisPassword:      "your-password",
+}
+```
+
+**Cluster:**
+```go
+cfg := &rebound.Config{
+    RedisMode:         "cluster",
+    RedisClusterAddrs: []string{"node-1:7000", "node-2:7001", "node-3:7002"},
+    RedisPassword:     "your-password",
 }
 ```
 

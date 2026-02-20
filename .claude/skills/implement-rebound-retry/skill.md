@@ -7,7 +7,7 @@ description: "Implement Rebound retry orchestration for intelligent failure hand
 
 Build resilient applications with intelligent retry mechanisms using Rebound - a Go library for retry orchestration with exponential backoff and dead letter queues.
 
-**Repository**: [kafkaretry-poc](../../) | **Package**: `rebound/pkg/rebound` | **References**: [pkg/rebound/README.md](../../pkg/rebound/README.md)
+**Repository**: [ruudy-sib/rebound](https://github.com/ruudy-sib/rebound) | **Package**: `github.com/ruudy-sib/rebound/pkg/rebound` | **Version**: `v1.2.3` | **References**: [pkg/rebound/README.md](https://github.com/ruudy-sib/rebound/blob/v1.2.3/pkg/rebound/README.md)
 
 ## Overview
 
@@ -18,6 +18,12 @@ Rebound provides:
 - 🏗️ **Hexagonal Architecture** - Clean separation of concerns
 - 💉 **Dependency Injection** - First-class support for uber-go/dig
 - 📝 **Structured Logging** - Built on uber-go/zap
+
+## Installation
+
+```bash
+go get github.com/ruudy-sib/rebound/pkg/rebound@v1.2.3
+```
 
 ## Quick Start: Basic Integration
 
@@ -30,7 +36,7 @@ import (
     "context"
     "time"
 
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -40,9 +46,10 @@ func main() {
     // Configure Rebound
     cfg := &rebound.Config{
         RedisAddr:    "localhost:6379",
-        KafkaBrokers: []string{"localhost:9092"},
         PollInterval: 1 * time.Second,
         Logger:       logger,
+        // RedisMode: "sentinel", // or "cluster" — default is "standalone"
+        // KafkaBrokers: []string{"localhost:9092"}, // optional: only for Kafka destinations
     }
 
     // Create instance
@@ -96,7 +103,7 @@ package handler
 
 import (
     "net/http"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -149,7 +156,7 @@ package consumer
 import (
     "context"
     "github.com/segmentio/kafka-go"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 type Consumer struct {
@@ -194,7 +201,7 @@ package main
 
 import (
     "github.com/DTSL/golang-libraries/di"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -205,9 +212,10 @@ func main() {
     container.Provide(func(logger *zap.Logger) *rebound.Config {
         return &rebound.Config{
             RedisAddr:    "redis.production.svc.cluster.local:6379",
-            KafkaBrokers: []string{"kafka-1:9092", "kafka-2:9092"},
             PollInterval: 1 * time.Second,
             Logger:       logger,
+            // RedisMode: "sentinel", // uncomment for HA
+            // KafkaBrokers: []string{"kafka-1:9092", "kafka-2:9092"}, // optional
         }
     })
 
@@ -223,6 +231,34 @@ func main() {
 ```
 
 ## Destination Types
+
+## Redis Configuration
+
+Rebound supports three Redis deployment modes via the `RedisMode` config field:
+
+| Mode | Config Fields | Use Case |
+|------|--------------|----------|
+| `"standalone"` (default) | `RedisAddr` | Single instance, dev/simple prod |
+| `"sentinel"` | `RedisMasterName`, `RedisSentinelAddrs` | High availability with automatic failover |
+| `"cluster"` | `RedisClusterAddrs` | Horizontal scaling across multiple nodes |
+
+```go
+// Standalone (default)
+cfg := &rebound.Config{RedisAddr: "localhost:6379"}
+
+// Sentinel
+cfg := &rebound.Config{
+    RedisMode:          "sentinel",
+    RedisMasterName:    "mymaster",
+    RedisSentinelAddrs: []string{"sentinel-1:26379", "sentinel-2:26379"},
+}
+
+// Cluster
+cfg := &rebound.Config{
+    RedisMode:         "cluster",
+    RedisClusterAddrs: []string{"node-1:7000", "node-2:7001", "node-3:7002"},
+}
+```
 
 ### Kafka Destinations
 
@@ -342,20 +378,103 @@ if err := rb.CreateTask(ctx, task); err != nil {
 rb.CreateTask(ctx, task) // ❌ Error ignored
 ```
 
+## HTTP API (Alternative to Go SDK)
+
+Rebound exposes a REST API for creating tasks from any language or service.
+
+### POST /tasks
+
+Create a retry task via HTTP. Use `url` in `destination` for HTTP-type destinations (**added in v1.2.3**):
+
+```bash
+# Kafka destination
+curl -X POST http://localhost:8080/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "order-123",
+    "source": "order-service",
+    "destination": {
+      "host": "kafka.prod",
+      "port": "9092",
+      "topic": "orders"
+    },
+    "dead_destination": {
+      "host": "kafka.prod",
+      "port": "9092",
+      "topic": "orders-dlq"
+    },
+    "max_retries": 5,
+    "base_delay": 10,
+    "client_id": "order-service",
+    "message_data": "{\"order_id\": 123}",
+    "destination_type": "kafka"
+  }'
+
+# HTTP destination (url field required)
+curl -X POST http://localhost:8080/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "webhook-456",
+    "source": "payment-service",
+    "destination": {
+      "url": "https://api.partner.com/webhook"
+    },
+    "dead_destination": {
+      "url": "https://api.partner.com/dlq"
+    },
+    "max_retries": 3,
+    "base_delay": 5,
+    "client_id": "payment-service",
+    "message_data": "{\"payment_id\": 456}",
+    "destination_type": "http"
+  }'
+```
+
+### GET /health
+
+```bash
+curl http://localhost:8080/health
+# {"status":"ok","checks":{"redis":"ok"}}
+```
+
+**`DestinationDTO` schema** (both `destination` and `dead_destination`):
+
+| Field | Type | Used by |
+|-------|------|---------|
+| `host` | string | Kafka |
+| `port` | string | Kafka |
+| `topic` | string | Kafka |
+| `url` | string | HTTP *(added v1.2.3)* |
+
 ## Monitoring
 
 ### Structured Logging
 
-Rebound logs all operations:
+Rebound logs all operations with rich fields for retry tracing (**enhanced in v1.2.3**):
 
 ```json
 {
   "level": "info",
-  "msg": "task scheduled",
+  "msg": "task saved to redis",
   "task_id": "order-123",
-  "source": "order-service",
-  "destination_type": "kafka",
-  "max_retries": 5
+  "destination_type": "http",
+  "destination_url": "https://api.partner.com/webhook",
+  "destination_topic": "",
+  "attempt": 1,
+  "delay": "10s",
+  "score": 1700000010
+}
+```
+
+```json
+{
+  "level": "info",
+  "msg": "scheduling retry",
+  "destination_type": "http",
+  "destination_url": "https://api.partner.com/webhook",
+  "destination_topic": "",
+  "delay": "20s",
+  "next_attempt": 2
 }
 ```
 
@@ -454,10 +573,10 @@ BaseDelay: 30, // Wait 30s instead of 5s
 ## Examples
 
 See comprehensive examples in `examples/`:
-- [01-basic-usage](../../examples/01-basic-usage) - Simple setup
-- [02-email-service](../../examples/02-email-service) - Email retry
-- [04-di-integration](../../examples/04-di-integration) - Production DI pattern
-- [07-consumer-benchmark](../../examples/07-consumer-benchmark) - Kafka consumer + benchmarks
+- [01-basic-usage](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/01-basic-usage) - Simple setup
+- [02-email-service](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/02-email-service) - Email retry
+- [04-di-integration](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/04-di-integration) - Production DI pattern
+- [07-consumer-benchmark](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/07-consumer-benchmark) - Kafka consumer + benchmarks
 
 ## Checklist
 
@@ -472,7 +591,7 @@ See comprehensive examples in `examples/`:
 - [ ] Integration tests written
 - [ ] Payloads kept under 10KB (or stored externally)
 - [ ] Code compiles: `go build ./...`
-- [ ] Benchmarks run successfully: `cd pkg/rebound && go test -bench=.`
+- [ ] Benchmarks run successfully: `go test -bench=. github.com/ruudy-sib/rebound/pkg/rebound`
 
 ## Performance Tuning
 
@@ -552,7 +671,7 @@ func processWithRebound(ctx context.Context, rb *rebound.Rebound, data []byte) e
 
 ## Additional Resources
 
-- **Main README**: [pkg/rebound/README.md](../../pkg/rebound/README.md)
-- **Integration Guide**: [INTEGRATION.md](../../INTEGRATION.md)
-- **Examples**: [examples/](../../examples/)
-- **Benchmarks**: [examples/07-consumer-benchmark/](../../examples/07-consumer-benchmark/)
+- **Main README**: [pkg/rebound/README.md](https://github.com/ruudy-sib/rebound/blob/v1.2.3/pkg/rebound/README.md)
+- **Integration Guide**: [INTEGRATION.md](https://github.com/ruudy-sib/rebound/blob/v1.2.3/INTEGRATION.md)
+- **Examples**: [examples/](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/)
+- **Benchmarks**: [examples/07-consumer-benchmark/](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/07-consumer-benchmark/)

@@ -29,7 +29,7 @@ Rebound can be used in three ways:
 replace rebound => ../path/to/rebound
 
 # Then import
-import "rebound/pkg/rebound"
+import "github.com/ruudy-sib/rebound/pkg/rebound"
 ```
 
 ### Option 2: Internal Go Module (Production)
@@ -54,7 +54,7 @@ package main
 
 import (
     "github.com/brevo/golang-libraries/di"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -64,8 +64,12 @@ func buildContainer() (*dig.Container, error) {
     // Provide rebound configuration
     container.Provide(func(logger *zap.Logger) *rebound.Config {
         return &rebound.Config{
-            RedisAddr:    os.Getenv("REDIS_ADDR"),
-            KafkaBrokers: strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
+            RedisMode:          os.Getenv("REDIS_MODE"),
+            RedisAddr:          os.Getenv("REDIS_ADDR"),
+            RedisMasterName:    os.Getenv("REDIS_MASTER_NAME"),
+            RedisSentinelAddrs: splitEnv("REDIS_SENTINEL_ADDRS"),
+            RedisClusterAddrs:  splitEnv("REDIS_CLUSTER_ADDRS"),
+            // KafkaBrokers: splitEnv("KAFKA_BROKERS"), // optional: only for Kafka destinations
             PollInterval: 1 * time.Second,
             Logger:       logger,
         }
@@ -87,7 +91,7 @@ package main
 import (
     "context"
     "github.com/brevo/golang-libraries/mainutils"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 func main() {
@@ -120,7 +124,7 @@ package http
 import (
     "net/http"
     "github.com/brevo/golang-libraries/httpjson"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -201,7 +205,7 @@ package kafka
 
 import (
     "context"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -255,7 +259,7 @@ package service
 
 import (
     "context"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -312,10 +316,23 @@ func (s *OrderService) scheduleNotificationRetry(ctx context.Context, order *Ord
 
 ```bash
 # .env or Kubernetes ConfigMap
+
+# Redis (choose one mode)
+REDIS_MODE=standalone                                    # default
 REDIS_ADDR=redis.production.svc.cluster.local:6379
 REDIS_PASSWORD=your-secure-password
 REDIS_DB=0
-KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+
+# Sentinel HA (set REDIS_MODE=sentinel)
+# REDIS_MASTER_NAME=mymaster
+# REDIS_SENTINEL_ADDRS=sentinel-1:26379,sentinel-2:26379,sentinel-3:26379
+
+# Cluster (set REDIS_MODE=cluster)
+# REDIS_CLUSTER_ADDRS=node-1:7000,node-2:7001,node-3:7002
+
+# Kafka (optional: only set if using Kafka destinations)
+# KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+
 REBOUND_POLL_INTERVAL=1s
 ```
 
@@ -329,18 +346,22 @@ import (
     "os"
     "strings"
     "time"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
 func ProvideReboundConfig(logger *zap.Logger) *rebound.Config {
     return &rebound.Config{
-        RedisAddr:     os.Getenv("REDIS_ADDR"),
-        RedisPassword: os.Getenv("REDIS_PASSWORD"),
-        RedisDB:       getEnvInt("REDIS_DB", 0),
-        KafkaBrokers:  strings.Split(os.Getenv("KAFKA_BROKERS"), ","),
-        PollInterval:  getEnvDuration("REBOUND_POLL_INTERVAL", 1*time.Second),
-        Logger:        logger,
+        RedisMode:          getEnv("REDIS_MODE", "standalone"),
+        RedisAddr:          os.Getenv("REDIS_ADDR"),
+        RedisPassword:      os.Getenv("REDIS_PASSWORD"),
+        RedisDB:            getEnvInt("REDIS_DB", 0),
+        RedisMasterName:    os.Getenv("REDIS_MASTER_NAME"),
+        RedisSentinelAddrs: splitCommaSep(os.Getenv("REDIS_SENTINEL_ADDRS")),
+        RedisClusterAddrs:  splitCommaSep(os.Getenv("REDIS_CLUSTER_ADDRS")),
+        // KafkaBrokers: splitCommaSep(os.Getenv("KAFKA_BROKERS")), // optional
+        PollInterval: getEnvDuration("REBOUND_POLL_INTERVAL", 1*time.Second),
+        Logger:       logger,
     }
 }
 ```
@@ -422,7 +443,7 @@ package service
 
 import (
     "testing"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 type MockRebound struct {
@@ -456,7 +477,7 @@ package integration
 
 import (
     "testing"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
 )
 
 func TestReboundIntegration(t *testing.T) {
@@ -510,8 +531,11 @@ spec:
         env:
         - name: REDIS_ADDR
           value: "redis.production.svc.cluster.local:6379"
-        - name: KAFKA_BROKERS
-          value: "kafka-1:9092,kafka-2:9092"
+        - name: REDIS_MODE
+          value: "standalone"
+        # Uncomment for Kafka destinations:
+        # - name: KAFKA_BROKERS
+        #   value: "kafka-1:9092,kafka-2:9092"
         - name: REBOUND_POLL_INTERVAL
           value: "1s"
         resources:

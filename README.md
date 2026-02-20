@@ -9,7 +9,7 @@ A production-ready retry orchestration service built with Go that provides intel
 ### Option 1: Embedded Go Package (Recommended for Go services)
 
 ```go
-import "rebound/pkg/rebound"
+import "github.com/ruudy-sib/rebound/pkg/rebound"
 
 rb, _ := rebound.New(&rebound.Config{
     RedisAddr: "localhost:6379",
@@ -294,10 +294,10 @@ rebound/
 
 ```bash
 # Add to your go.mod
-go get rebound/pkg/rebound
+go get github.com/ruudy-sib/rebound/pkg/rebound
 
 # Import in your code
-import "rebound/pkg/rebound"
+import "github.com/ruudy-sib/rebound/pkg/rebound"
 ```
 
 See [INTEGRATION.md](INTEGRATION.md) for detailed integration patterns.
@@ -325,10 +325,14 @@ The service is configured via environment variables:
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `HTTP_PORT` | HTTP server port | `8080` | No |
-| `REDIS_ADDR` | Redis address | `localhost:6379` | No |
+| `REDIS_MODE` | Redis mode: `standalone`, `sentinel`, `cluster` | `standalone` | No |
+| `REDIS_ADDR` | Redis address (standalone mode) | `localhost:6379` | No |
 | `REDIS_PASSWORD` | Redis password | _(empty)_ | No |
 | `REDIS_DB` | Redis database number | `0` | No |
-| `KAFKA_BROKERS` | Comma-separated Kafka brokers | `localhost:9092` | No |
+| `REDIS_MASTER_NAME` | Sentinel master name (sentinel mode) | _(empty)_ | sentinel only |
+| `REDIS_SENTINEL_ADDRS` | Comma-separated sentinel addresses (sentinel mode) | _(empty)_ | sentinel only |
+| `REDIS_CLUSTER_ADDRS` | Comma-separated cluster node addresses (cluster mode) | _(empty)_ | cluster only |
+| `KAFKA_BROKERS` | Comma-separated Kafka brokers | _(empty)_ | No (Kafka destinations only) |
 | `POLL_INTERVAL` | Worker poll interval | `1s` | No |
 | `LOG_LEVEL` | Logging level | `info` | No |
 | `ENVIRONMENT` | Environment (dev/prod) | `dev` | No |
@@ -344,7 +348,7 @@ package main
 
 import (
     "context"
-    "rebound/pkg/rebound"
+    "github.com/ruudy-sib/rebound/pkg/rebound"
     "go.uber.org/zap"
 )
 
@@ -354,7 +358,7 @@ func main() {
     // Create Rebound
     rb, _ := rebound.New(&rebound.Config{
         RedisAddr: "localhost:6379",
-        KafkaBrokers: []string{"localhost:9092"},
+        // KafkaBrokers: []string{"localhost:9092"}, // optional: only needed for Kafka destinations
         Logger: logger,
     })
     defer rb.Close()
@@ -651,8 +655,8 @@ docker run -d \
   --name rebound \
   -p 8080:8080 \
   -e REDIS_ADDR=redis:6379 \
-  -e KAFKA_BROKERS=kafka:9092 \
   rebound:latest
+  # Add -e KAFKA_BROKERS=kafka:9092 only if using Kafka destinations
 ```
 
 ### Docker Compose
@@ -768,7 +772,21 @@ export REDIS_PASSWORD=your-secure-password
 
 ### High Availability
 
-- Use Redis Sentinel or Redis Cluster
+- Use Redis Sentinel (`REDIS_MODE=sentinel`) or Redis Cluster (`REDIS_MODE=cluster`)
+
+**Sentinel configuration:**
+```bash
+export REDIS_MODE=sentinel
+export REDIS_MASTER_NAME=mymaster
+export REDIS_SENTINEL_ADDRS=sentinel-1:26379,sentinel-2:26379,sentinel-3:26379
+```
+
+**Cluster configuration:**
+```bash
+export REDIS_MODE=cluster
+export REDIS_CLUSTER_ADDRS=node-1:7000,node-2:7001,node-3:7002
+```
+
 - Use multiple Kafka brokers
 - Configure producer acknowledgment: `acks=all`
 
