@@ -22,6 +22,11 @@ type DestinationDTO struct {
 	Port  string `json:"port"`
 	Topic string `json:"topic"`
 	URL   string `json:"url"`
+
+	// SASL authentication (Kafka only). Mechanism is one of "PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512".
+	SASLMechanism string `json:"sasl_mechanism,omitempty"`
+	SASLUsername  string `json:"sasl_username,omitempty"`
+	SASLPassword  string `json:"sasl_password,omitempty"`
 }
 
 // CreateTaskResponse is returned on successful task creation.
@@ -47,16 +52,22 @@ func (r *CreateTaskRequest) toEntity() *entity.Task {
 		ID:     r.ID,
 		Source: r.Source,
 		Destination: entity.Destination{
-			Host:  r.Destination.Host,
-			Port:  r.Destination.Port,
-			Topic: r.Destination.Topic,
-			URL:   r.Destination.URL,
+			Host:          r.Destination.Host,
+			Port:          r.Destination.Port,
+			Topic:         r.Destination.Topic,
+			URL:           r.Destination.URL,
+			SASLMechanism: r.Destination.SASLMechanism,
+			SASLUsername:  r.Destination.SASLUsername,
+			SASLPassword:  r.Destination.SASLPassword,
 		},
 		DeadDestination: entity.Destination{
-			Host:  r.DeadDestination.Host,
-			Port:  r.DeadDestination.Port,
-			Topic: r.DeadDestination.Topic,
-			URL:   r.DeadDestination.URL,
+			Host:          r.DeadDestination.Host,
+			Port:          r.DeadDestination.Port,
+			Topic:         r.DeadDestination.Topic,
+			URL:           r.DeadDestination.URL,
+			SASLMechanism: r.DeadDestination.SASLMechanism,
+			SASLUsername:  r.DeadDestination.SASLUsername,
+			SASLPassword:  r.DeadDestination.SASLPassword,
 		},
 		MaxRetries:      r.MaxRetries,
 		BaseDelay:       r.BaseDelay,

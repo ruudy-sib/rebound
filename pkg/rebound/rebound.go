@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/segmentio/kafka-go"
 	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
@@ -203,7 +204,8 @@ const (
 )
 
 // Destination specifies where a message should be delivered.
-// For Kafka: use Host, Port, and Topic.
+// For Kafka: use Host, Port, and Topic — or supply KafkaWriter to inject a
+// pre-configured *kafka.Writer directly (Host/Port are then ignored).
 // For HTTP: use URL.
 type Destination struct {
 	// Kafka fields
@@ -213,6 +215,17 @@ type Destination struct {
 
 	// HTTP field
 	URL string
+
+	// SASL authentication (Kafka only).
+	// SASLMechanism is one of "PLAIN", "SCRAM-SHA-256", or "SCRAM-SHA-512".
+	SASLMechanism string
+	SASLUsername  string
+	SASLPassword  string
+
+	// KafkaWriter allows callers to inject a pre-configured *kafka.Writer.
+	// When set, Host and Port are ignored and this writer is used directly.
+	// The caller is responsible for closing the writer.
+	KafkaWriter *kafka.Writer
 }
 
 // toDomain converts a public Task to an internal domain entity.
@@ -221,16 +234,24 @@ func (t *Task) toDomain() *entity.Task {
 		ID:     t.ID,
 		Source: t.Source,
 		Destination: entity.Destination{
-			Host:  t.Destination.Host,
-			Port:  t.Destination.Port,
-			Topic: t.Destination.Topic,
-			URL:   t.Destination.URL,
+			Host:          t.Destination.Host,
+			Port:          t.Destination.Port,
+			Topic:         t.Destination.Topic,
+			URL:           t.Destination.URL,
+			SASLMechanism: t.Destination.SASLMechanism,
+			SASLUsername:  t.Destination.SASLUsername,
+			SASLPassword:  t.Destination.SASLPassword,
+			KafkaWriter:   t.Destination.KafkaWriter,
 		},
 		DeadDestination: entity.Destination{
-			Host:  t.DeadDestination.Host,
-			Port:  t.DeadDestination.Port,
-			Topic: t.DeadDestination.Topic,
-			URL:   t.DeadDestination.URL,
+			Host:          t.DeadDestination.Host,
+			Port:          t.DeadDestination.Port,
+			Topic:         t.DeadDestination.Topic,
+			URL:           t.DeadDestination.URL,
+			SASLMechanism: t.DeadDestination.SASLMechanism,
+			SASLUsername:  t.DeadDestination.SASLUsername,
+			SASLPassword:  t.DeadDestination.SASLPassword,
+			KafkaWriter:   t.DeadDestination.KafkaWriter,
 		},
 		MaxRetries:      t.MaxRetries,
 		BaseDelay:       t.BaseDelay,
