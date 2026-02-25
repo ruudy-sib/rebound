@@ -7,7 +7,7 @@ description: "Implement Rebound retry orchestration for intelligent failure hand
 
 Build resilient applications with intelligent retry mechanisms using Rebound - a Go library for retry orchestration with exponential backoff and dead letter queues.
 
-**Repository**: [ruudy-sib/rebound](https://github.com/ruudy-sib/rebound) | **Package**: `github.com/ruudy-sib/rebound/pkg/rebound` | **Version**: `v1.2.3` | **References**: [pkg/rebound/README.md](https://github.com/ruudy-sib/rebound/blob/v1.2.3/pkg/rebound/README.md)
+**Repository**: [ruudy-sib/rebound](https://github.com/ruudy-sib/rebound) | **Package**: `github.com/ruudy-sib/rebound/pkg/rebound` | **References**: [pkg/rebound/README.md](https://github.com/ruudy-sib/rebound/blob/main/pkg/rebound/README.md)
 
 ## Overview
 
@@ -22,7 +22,7 @@ Rebound provides:
 ## Installation
 
 ```bash
-go get github.com/ruudy-sib/rebound/pkg/rebound@v1.2.3
+go get github.com/ruudy-sib/rebound/pkg/rebound@latest
 ```
 
 ## Quick Start: Basic Integration
@@ -260,6 +260,7 @@ cfg := &rebound.Config{
 
 ### Kafka Destinations
 
+**Basic (host + port + topic):**
 ```go
 task := &rebound.Task{
     Destination: rebound.Destination{
@@ -271,10 +272,43 @@ task := &rebound.Task{
 }
 ```
 
+**With SASL authentication** (`"PLAIN"`, `"SCRAM-SHA-256"`, or `"SCRAM-SHA-512"`):
+```go
+task := &rebound.Task{
+    Destination: rebound.Destination{
+        Host:          "kafka.prod",
+        Port:          "9092",
+        Topic:         "events",
+        SASLMechanism: "SCRAM-SHA-256",
+        SASLUsername:  "service-account",
+        SASLPassword:  "secret",
+    },
+    DestinationType: rebound.DestinationTypeKafka,
+}
+```
+
+**With a pre-built `*kafka.Writer`** (package-embedding mode — caller owns the writer lifecycle):
+```go
+writer := &kafka.Writer{
+    Addr:         kafka.TCP("kafka.prod:9092"),
+    Balancer:     &kafka.LeastBytes{},
+    Transport:    myCustomTransport, // TLS, auth, etc.
+}
+
+task := &rebound.Task{
+    Destination: rebound.Destination{
+        Topic:       "events",
+        KafkaWriter: writer, // Host/Port ignored when writer is set
+    },
+    DestinationType: rebound.DestinationTypeKafka,
+}
+```
+
 **Behavior:**
 - Messages sent via Kafka producer
 - Key format: `{task_id}|{attempt}`
 - Value: Raw message data
+- SASL writers are cached by `addr|mechanism|username`; caller-injected writers are used as-is and never closed by Rebound
 
 ### HTTP Destinations
 
@@ -382,7 +416,7 @@ Rebound exposes a REST API for creating tasks from any language or service.
 
 ### POST /tasks
 
-Create a retry task via HTTP. Use `url` in `destination` for HTTP-type destinations (**added in v1.2.3**):
+Create a retry task via HTTP. Use `url` in `destination` for HTTP-type destinations:
 
 ```bash
 # Kafka destination
@@ -400,6 +434,35 @@ curl -X POST http://localhost:8080/tasks \
       "host": "kafka.prod",
       "port": "9092",
       "topic": "orders-dlq"
+    },
+    "max_retries": 5,
+    "base_delay": 10,
+    "client_id": "order-service",
+    "message_data": "{\"order_id\": 123}",
+    "destination_type": "kafka"
+  }'
+
+# Kafka destination with SASL authentication
+curl -X POST http://localhost:8080/tasks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "order-123",
+    "source": "order-service",
+    "destination": {
+      "host": "kafka.prod",
+      "port": "9092",
+      "topic": "orders",
+      "sasl_mechanism": "SCRAM-SHA-256",
+      "sasl_username": "service-account",
+      "sasl_password": "secret"
+    },
+    "dead_destination": {
+      "host": "kafka.prod",
+      "port": "9092",
+      "topic": "orders-dlq",
+      "sasl_mechanism": "SCRAM-SHA-256",
+      "sasl_username": "service-account",
+      "sasl_password": "secret"
     },
     "max_retries": 5,
     "base_delay": 10,
@@ -442,13 +505,16 @@ curl http://localhost:8080/health
 | `host` | string | Kafka |
 | `port` | string | Kafka |
 | `topic` | string | Kafka |
-| `url` | string | HTTP *(added v1.2.3)* |
+| `url` | string | HTTP |
+| `sasl_mechanism` | string | Kafka (`"PLAIN"`, `"SCRAM-SHA-256"`, `"SCRAM-SHA-512"`) |
+| `sasl_username` | string | Kafka |
+| `sasl_password` | string | Kafka |
 
 ## Monitoring
 
 ### Structured Logging
 
-Rebound logs all operations with rich fields for retry tracing (**enhanced in v1.2.3**):
+Rebound logs all operations with rich fields for retry tracing:
 
 ```json
 {
@@ -571,10 +637,10 @@ BaseDelay: 30, // Wait 30s instead of 5s
 ## Examples
 
 See comprehensive examples in `examples/`:
-- [01-basic-usage](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/01-basic-usage) - Simple setup
-- [02-email-service](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/02-email-service) - Email retry
-- [04-di-integration](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/04-di-integration) - Production DI pattern
-- [07-consumer-benchmark](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/07-consumer-benchmark) - Kafka consumer + benchmarks
+- [01-basic-usage](https://github.com/ruudy-sib/rebound/tree/main/examples/01-basic-usage) - Simple setup
+- [02-email-service](https://github.com/ruudy-sib/rebound/tree/main/examples/02-email-service) - Email retry
+- [04-di-integration](https://github.com/ruudy-sib/rebound/tree/main/examples/04-di-integration) - Production DI pattern
+- [07-consumer-benchmark](https://github.com/ruudy-sib/rebound/tree/main/examples/07-consumer-benchmark) - Kafka consumer + benchmarks
 
 ## Checklist
 
@@ -669,7 +735,7 @@ func processWithRebound(ctx context.Context, rb *rebound.Rebound, data []byte) e
 
 ## Additional Resources
 
-- **Main README**: [pkg/rebound/README.md](https://github.com/ruudy-sib/rebound/blob/v1.2.3/pkg/rebound/README.md)
-- **Integration Guide**: [INTEGRATION.md](https://github.com/ruudy-sib/rebound/blob/v1.2.3/INTEGRATION.md)
-- **Examples**: [examples/](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/)
-- **Benchmarks**: [examples/07-consumer-benchmark/](https://github.com/ruudy-sib/rebound/tree/v1.2.3/examples/07-consumer-benchmark/)
+- **Main README**: [pkg/rebound/README.md](https://github.com/ruudy-sib/rebound/blob/main/pkg/rebound/README.md)
+- **Integration Guide**: [INTEGRATION.md](https://github.com/ruudy-sib/rebound/blob/main/INTEGRATION.md)
+- **Examples**: [examples/](https://github.com/ruudy-sib/rebound/tree/main/examples/)
+- **Benchmarks**: [examples/07-consumer-benchmark/](https://github.com/ruudy-sib/rebound/tree/main/examples/07-consumer-benchmark/)
