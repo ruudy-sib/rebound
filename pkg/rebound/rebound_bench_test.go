@@ -16,7 +16,7 @@ func BenchmarkTaskCreation(b *testing.B) {
 	logger, _ := zap.NewProduction()
 	cfg := &rebound.Config{
 		RedisAddr:    "localhost:6379",
-		KafkaBrokers: []string{"localhost:9092"},
+
 		PollInterval: 1 * time.Second,
 		Logger:       logger,
 	}
@@ -66,7 +66,7 @@ func BenchmarkTaskCreationHTTP(b *testing.B) {
 	logger, _ := zap.NewProduction()
 	cfg := &rebound.Config{
 		RedisAddr:    "localhost:6379",
-		KafkaBrokers: []string{"localhost:9092"},
+
 		PollInterval: 1 * time.Second,
 		Logger:       logger,
 	}
@@ -112,7 +112,7 @@ func BenchmarkTaskCreationParallel(b *testing.B) {
 	logger, _ := zap.NewProduction()
 	cfg := &rebound.Config{
 		RedisAddr:    "localhost:6379",
-		KafkaBrokers: []string{"localhost:9092"},
+
 		PollInterval: 1 * time.Second,
 		Logger:       logger,
 	}
@@ -169,7 +169,7 @@ func BenchmarkTaskCreationWithVariablePayload(b *testing.B) {
 			logger, _ := zap.NewProduction()
 			cfg := &rebound.Config{
 				RedisAddr:    "localhost:6379",
-				KafkaBrokers: []string{"localhost:9092"},
+		
 				PollInterval: 1 * time.Second,
 				Logger:       logger,
 			}
@@ -239,7 +239,7 @@ func BenchmarkTaskCreationWithRetries(b *testing.B) {
 			logger, _ := zap.NewProduction()
 			cfg := &rebound.Config{
 				RedisAddr:    "localhost:6379",
-				KafkaBrokers: []string{"localhost:9092"},
+		
 				PollInterval: 1 * time.Second,
 				Logger:       logger,
 			}
@@ -295,7 +295,7 @@ func BenchmarkReboundInitialization(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cfg := &rebound.Config{
 			RedisAddr:    "localhost:6379",
-			KafkaBrokers: []string{"localhost:9092"},
+	
 			PollInterval: 1 * time.Second,
 			Logger:       logger,
 		}

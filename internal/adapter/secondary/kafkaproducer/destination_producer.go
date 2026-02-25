@@ -2,11 +2,15 @@ package kafkaproducer
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl"
+	"github.com/segmentio/kafka-go/sasl/plain"
+	"github.com/segmentio/kafka-go/sasl/scram"
 	"go.uber.org/zap"
 
 	"github.com/ruudy-sib/rebound/internal/domain/entity"
@@ -15,7 +19,7 @@ import (
 
 // DestinationProducer implements secondary.MessageProducer by creating Kafka
 // writers on-demand per broker address derived from the task destination.
-// Writers are cached by "host:port" and reused across calls.
+// Writers are cached by a key derived from address + SASL identity and reused across calls.
 // This is used when no global broker list is configured (package embedding mode).
 type DestinationProducer struct {
 	writers map[string]*kafka.Writer
@@ -32,13 +36,13 @@ func NewDestinationProducer(logger *zap.Logger) secondary.MessageProducer {
 }
 
 // Produce sends a message to the broker and topic specified in destination.
+// If destination.KafkaWriter is set, it is used directly and Host/Port are ignored.
+// Otherwise Host and Port are required.
 func (p *DestinationProducer) Produce(ctx context.Context, destination entity.Destination, key, value []byte) error {
-	if destination.Host == "" || destination.Port == "" {
-		return fmt.Errorf("kafka destination requires host and port")
+	writer, err := p.resolveWriter(destination)
+	if err != nil {
+		return err
 	}
-
-	addr := destination.Host + ":" + destination.Port
-	writer := p.writerFor(addr)
 
 	msg := kafka.Message{
 		Topic: destination.Topic,
@@ -47,11 +51,10 @@ func (p *DestinationProducer) Produce(ctx context.Context, destination entity.De
 	}
 
 	if err := writer.WriteMessages(ctx, msg); err != nil {
-		return fmt.Errorf("writing message to kafka topic %q at %q: %w", destination.Topic, addr, err)
+		return fmt.Errorf("writing message to kafka topic %q: %w", destination.Topic, err)
 	}
 
 	p.logger.Debug("message produced",
-		zap.String("broker", addr),
 		zap.String("topic", destination.Topic),
 		zap.Int("value_size", len(value)),
 	)
@@ -60,6 +63,7 @@ func (p *DestinationProducer) Produce(ctx context.Context, destination entity.De
 }
 
 // Close shuts down all cached writers.
+// Writers injected via KafkaWriter are not closed here — the caller owns them.
 func (p *DestinationProducer) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -78,11 +82,38 @@ func (p *DestinationProducer) Close() error {
 	return nil
 }
 
-func (p *DestinationProducer) writerFor(addr string) *kafka.Writer {
+// resolveWriter returns the writer to use for the given destination.
+// Injected writers are used as-is; all others are created and cached.
+func (p *DestinationProducer) resolveWriter(dest entity.Destination) (*kafka.Writer, error) {
+	if dest.KafkaWriter != nil {
+		w, ok := dest.KafkaWriter.(*kafka.Writer)
+		if !ok {
+			return nil, fmt.Errorf("KafkaWriter must be a *kafka.Writer, got %T", dest.KafkaWriter)
+		}
+		return w, nil
+	}
+
+	if dest.Host == "" || dest.Port == "" {
+		return nil, fmt.Errorf("kafka destination requires host and port (or a KafkaWriter)")
+	}
+
+	return p.writerFor(dest), nil
+}
+
+// writerFor returns a cached writer for the destination, creating one if needed.
+// The cache key incorporates the broker address and SASL identity so that
+// different credentials for the same broker get distinct writers.
+func (p *DestinationProducer) writerFor(dest entity.Destination) *kafka.Writer {
+	addr := dest.Host + ":" + dest.Port
+	cacheKey := addr
+	if dest.SASLMechanism != "" {
+		cacheKey = addr + "|" + dest.SASLMechanism + "|" + dest.SASLUsername
+	}
+
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if w, ok := p.writers[addr]; ok {
+	if w, ok := p.writers[cacheKey]; ok {
 		return w
 	}
 
@@ -92,9 +123,44 @@ func (p *DestinationProducer) writerFor(addr string) *kafka.Writer {
 		BatchTimeout: 100 * time.Millisecond,
 		RequiredAcks: kafka.RequireAll,
 	}
-	p.writers[addr] = w
 
-	p.logger.Info("kafka writer created", zap.String("broker", addr))
+	if dest.SASLMechanism != "" {
+		dialer, err := dialerWithSASL(dest)
+		if err != nil {
+			p.logger.Warn("unsupported SASL mechanism; proceeding without SASL",
+				zap.String("mechanism", dest.SASLMechanism),
+				zap.Error(err),
+			)
+		} else {
+			w.Transport = &kafka.Transport{
+				SASL: dialer,
+				TLS:  &tls.Config{MinVersion: tls.VersionTLS12},
+			}
+		}
+	}
+
+	p.writers[cacheKey] = w
+	p.logger.Info("kafka writer created",
+		zap.String("broker", addr),
+		zap.String("sasl_mechanism", dest.SASLMechanism),
+	)
 
 	return w
+}
+
+// dialerWithSASL returns the sasl.Mechanism for the given destination.
+func dialerWithSASL(dest entity.Destination) (sasl.Mechanism, error) {
+	switch dest.SASLMechanism {
+	case "PLAIN":
+		return plain.Mechanism{
+			Username: dest.SASLUsername,
+			Password: dest.SASLPassword,
+		}, nil
+	case "SCRAM-SHA-256":
+		return scram.Mechanism(scram.SHA256, dest.SASLUsername, dest.SASLPassword)
+	case "SCRAM-SHA-512":
+		return scram.Mechanism(scram.SHA512, dest.SASLUsername, dest.SASLPassword)
+	default:
+		return nil, fmt.Errorf("unsupported SASL mechanism %q (supported: PLAIN, SCRAM-SHA-256, SCRAM-SHA-512)", dest.SASLMechanism)
+	}
 }

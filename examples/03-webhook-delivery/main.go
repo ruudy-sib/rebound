@@ -158,7 +158,7 @@ func (s *WebhookService) BroadcastEvent(ctx context.Context, event *WebhookEvent
 }
 
 func main() {
-	fmt.Println("=== Rebound Example 3: Webhook Delivery Service ===\n")
+	fmt.Println("=== Rebound Example 3: Webhook Delivery Service ===")
 
 	// Setup logger
 	logger, _ := zap.NewDevelopment()
@@ -184,7 +184,7 @@ func main() {
 		log.Fatalf("Failed to start rebound: %v", err)
 	}
 
-	fmt.Println("✓ Webhook delivery service with Rebound started\n")
+	fmt.Println("✓ Webhook delivery service with Rebound started")
 
 	// Create webhook service
 	webhookService := NewWebhookService(rb, logger)

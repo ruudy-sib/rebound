@@ -242,7 +242,7 @@ func buildContainer() (*dig.Container, error) {
 }
 
 func main() {
-	fmt.Println("=== Rebound Example 4: Dependency Injection Integration ===\n")
+	fmt.Println("=== Rebound Example 4: Dependency Injection Integration ===")
 
 	// Build DI container
 	container, err := buildContainer()

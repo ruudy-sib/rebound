@@ -17,7 +17,7 @@ func Example_basic() {
 	// Create configuration
 	cfg := &rebound.Config{
 		RedisAddr:    "localhost:6379",
-		KafkaBrokers: []string{"localhost:9092"},
+
 		PollInterval: 1 * time.Second,
 	}
 
@@ -98,7 +98,7 @@ func Example_dependencyInjection() {
 	container.Provide(func() *rebound.Config {
 		return &rebound.Config{
 			RedisAddr:    "localhost:6379",
-			KafkaBrokers: []string{"localhost:9092"},
+	
 			PollInterval: 1 * time.Second,
 		}
 	})

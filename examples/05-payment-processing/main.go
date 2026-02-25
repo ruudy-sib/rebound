@@ -196,7 +196,7 @@ func (s *PaymentService) sendToFailureQueue(ctx context.Context, payment *Paymen
 }
 
 func main() {
-	fmt.Println("=== Rebound Example 5: Payment Processing with Smart Retry ===\n")
+	fmt.Println("=== Rebound Example 5: Payment Processing with Smart Retry ===")
 
 	// Setup logger
 	logger, _ := zap.NewDevelopment()
@@ -222,13 +222,13 @@ func main() {
 		log.Fatalf("Failed to start rebound: %v", err)
 	}
 
-	fmt.Println("✓ Payment service with smart retry started\n")
+	fmt.Println("✓ Payment service with smart retry started")
 
 	// Create payment service
 	paymentService := NewPaymentService(rb, logger)
 
 	// Test different failure scenarios
-	fmt.Println("💳 Testing different payment failure scenarios:\n")
+	fmt.Println("💳 Testing different payment failure scenarios:")
 
 	scenarios := []struct {
 		payment *Payment

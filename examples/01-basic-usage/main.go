@@ -13,7 +13,7 @@ import (
 
 // Example 1: Basic usage - Simplest way to use Rebound
 func main() {
-	fmt.Println("=== Rebound Example 1: Basic Usage ===\n")
+	fmt.Println("=== Rebound Example 1: Basic Usage ===")
 
 	// Create a logger
 	logger, _ := zap.NewDevelopment()
@@ -41,7 +41,7 @@ func main() {
 		log.Fatalf("Failed to start rebound: %v", err)
 	}
 
-	fmt.Println("✓ Rebound started successfully\n")
+	fmt.Println("✓ Rebound started successfully")
 
 	// Example 1: Kafka task
 	fmt.Println("Creating Kafka task...")
