@@ -109,7 +109,7 @@ func (s *EmailService) SendBulkEmails(ctx context.Context, emails []*Email) (sen
 }
 
 func main() {
-	fmt.Println("=== Rebound Example 2: Email Service Integration ===\n")
+	fmt.Println("=== Rebound Example 2: Email Service Integration ===")
 
 	// Setup logger
 	logger, _ := zap.NewDevelopment()
@@ -135,7 +135,7 @@ func main() {
 		log.Fatalf("Failed to start rebound: %v", err)
 	}
 
-	fmt.Println("✓ Email service with Rebound started\n")
+	fmt.Println("✓ Email service with Rebound started")
 
 	// Create email service
 	emailService := NewEmailService(rb, logger)

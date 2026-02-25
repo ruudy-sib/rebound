@@ -166,7 +166,7 @@ func CalculateRetrySchedule(policy RetryPolicy) []time.Duration {
 }
 
 func main() {
-	fmt.Println("=== Rebound Example 6: Multi-Tenant Service ===\n")
+	fmt.Println("=== Rebound Example 6: Multi-Tenant Service ===")
 
 	// Setup logger
 	logger, _ := zap.NewDevelopment()
@@ -192,7 +192,7 @@ func main() {
 		log.Fatalf("Failed to start rebound: %v", err)
 	}
 
-	fmt.Println("✓ Multi-tenant service with Rebound started\n")
+	fmt.Println("✓ Multi-tenant service with Rebound started")
 
 	// Create tenant service
 	tenantService := NewTenantService(rb, logger)
@@ -226,7 +226,7 @@ func main() {
 		},
 	}
 
-	fmt.Println("📊 Tenant Retry Policies:\n")
+	fmt.Println("📊 Tenant Retry Policies:")
 	fmt.Println("┌──────────────┬──────────────────┬────────────┬──────────┬───────────┬──────────┐")
 	fmt.Println("│ Tenant ID    │ Name             │ Plan       │ Retries  │ Base Delay│ Priority │")
 	fmt.Println("├──────────────┼──────────────────┼────────────┼──────────┼───────────┼──────────┤")
@@ -243,7 +243,7 @@ func main() {
 	fmt.Println("└──────────────┴──────────────────┴────────────┴──────────┴───────────┴──────────┘")
 
 	// Show retry schedules for each plan
-	fmt.Println("\n⏱️  Retry Schedules by Plan:\n")
+	fmt.Println("\n⏱️  Retry Schedules by Plan:")
 
 	for _, plan := range []string{"enterprise", "pro", "free"} {
 		policy := tenantService.GetTenantRetryPolicy(&Tenant{Plan: plan})
@@ -257,7 +257,7 @@ func main() {
 	}
 
 	// Broadcast event to all tenants
-	fmt.Println("📡 Broadcasting system update to all tenants...\n")
+	fmt.Println("📡 Broadcasting system update to all tenants...")
 
 	event := map[string]interface{}{
 		"update_type": "feature_release",

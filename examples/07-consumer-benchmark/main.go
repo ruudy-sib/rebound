@@ -28,7 +28,7 @@ var (
 func main() {
 	flag.Parse()
 
-	fmt.Println("=== Rebound Consumer Benchmark ===\n")
+	fmt.Println("=== Rebound Consumer Benchmark ===")
 
 	// Create logger
 	logger, _ := zap.NewDevelopment()
